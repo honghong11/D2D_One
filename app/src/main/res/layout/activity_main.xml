@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+        <LinearLayout
+            android:id="@+id/linearLayout1"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <fragment
+                android:name="com.example.ht.d2d_one.DeviceListFragment"
+                android:id="@+id/list_frag"
+                android:layout_height="200dp"
+                android:layout_width="match_parent">
+            </fragment>
+            <fragment
+                android:name="com.example.ht.d2d_one.DeviceDetailFragment"
+                android:id="@+id/detail_frag"
+                android:layout_height="200dp"
+                android:layout_width="match_parent">
+            </fragment>
+
+
+        </LinearLayout>
+</LinearLayout>
