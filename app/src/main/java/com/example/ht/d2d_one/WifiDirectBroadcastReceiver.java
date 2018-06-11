@@ -29,6 +29,13 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
                 mainActivity.setIsWifiP2pEnable(false);
             }
             Log.d(MainActivity.TRG,"wifiP2p state changed - "+state);
+        } else if (WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action)){
+            Log.d(MainActivity.TRG,"1111111111111111111111111111111111111111111111111111111111111111111111");
+            if(manager!=null){
+                //request the current peer list
+                manager.requestPeers(channel,(WifiP2pManager.PeerListListener)
+                        mainActivity.getFragmentManager().findFragmentById(R.id.list_frag));
+            }
         }
     }
 }
