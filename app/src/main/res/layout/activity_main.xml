@@ -11,11 +11,10 @@
             android:orientation="vertical">
 
             <fragment
-                android:name="com.example.ht.d2d_one.DeviceListFragment"
                 android:id="@+id/list_frag"
-                android:layout_height="200dp"
-                android:layout_width="match_parent">
-            </fragment>
+                android:name="com.example.ht.d2d_one.DeviceListFragment"
+                android:layout_width="match_parent"
+                android:layout_height="309dp"></fragment>
             <fragment
                 android:name="com.example.ht.d2d_one.DeviceDetailFragment"
                 android:id="@+id/detail_frag"

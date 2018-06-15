@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
@@ -15,7 +16,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements DeviceListFragment.DeviceActionListener {
     public static final String TRG="D2D_One";
     private WifiP2pManager manager;
     private WifiP2pManager.Channel channel;
@@ -92,5 +93,34 @@ public class MainActivity extends AppCompatActivity {
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    @Override
+    public void connect(WifiP2pConfig wifiP2pConfig){
+        manager.connect(channel, wifiP2pConfig, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                Toast.makeText(MainActivity.this,"connect failed, retry.",Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    @Override
+    public void disconnect(){
+        manager.removeGroup(channel, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Log.d(MainActivity.TRG,"disconnect is okkkkkkkkkkk");
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                Log.d(MainActivity.TRG,"disconnect failed:"+ reason);
+            }
+        });
     }
 }
