@@ -7,8 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class wifiDeviceWithLabel{
-    WifiP2pDevice device;
+    WifiP2pDevice device = null;
     String label = null;
-    public wifiDeviceWithLabel(){
-    }
 }

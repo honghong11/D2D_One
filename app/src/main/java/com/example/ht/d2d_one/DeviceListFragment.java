@@ -24,9 +24,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class DeviceListFragment extends ListFragment implements WifiP2pManager.PeerListListener{
     public int i=1;
@@ -36,17 +34,17 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
     WifiP2pManager manager;
     wifiDeviceWithLabel extendDevice;
     String label = "";
-    WifiPeerListAdapter listAdapter = null;
     private List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
-    //enxtenPeers 用于在wifiP2pDevice基础上加上一个组标签选项;用这种复合类型的数据结构和adapter联合，去显示增加的数据项。这种写法好像和adapter联系不到一起。
-//    private Map<WifiP2pDevice,String> extendPeer = new LinkedHashMap<WifiP2pDevice,String>();
-//    private List<LinkedHashMap<WifiP2pDevice,String>> ectendPeers = new ArrayList<LinkedHashMap<WifiP2pDevice, String>>();
+    private List<wifiDeviceWithLabel> epeers = new ArrayList<wifiDeviceWithLabel>();
 
     public void onActivityCreated(Bundle savedInstanceState){
         super.onActivityCreated(savedInstanceState);
         //需要将adapter和资源文件关联
-        this.setListAdapter(new WifiPeerListAdapter(getActivity(),R.layout.row_device,peers));
-//        this.setListAdapter(new WifiPeerListAdapter(getActivity(),R.layout.row_device,extendPeers));
+        //this.setListAdapter(new WifiPeerListAdapter(getActivity(),R.layout.row_device,peers));
+        this.setListAdapter(new WifiServiceAdapter(getActivity(),R.layout.row_device,epeers));
+//        this.setListAdapter(new WifiServiceAdapter(this.getActivity(),
+//                R.layout.row_device, android.R.id.text1,
+//                new ArrayList<wifiDeviceWithLabel>()));
     }
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container,Bundle savedInstanceState){
@@ -60,21 +58,6 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
         mContentView.findViewById(R.id.createGroup).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                AlertDialog.Builder builder= new AlertDialog.Builder(getActivity());
-//                builder.setTitle("建组");
-//                builder.setIcon(R.mipmap.ic_launcher);
-//                builder.setView(R.layout.creategroup);
-//                builder.setPositiveButton("publish", new DialogInterface.OnClickListener() {
-//                    @Override
-//                    public void onClick(DialogInterface dialog, int which) {
-//                        ((DeviceActionListener)getActivity()).createGroup();
-//                        Log.d(MainActivity.TRG,"调用createGroup函数成功啦啦啦啦啦啦啦啦啦");
-//                        EditText editText = (EditText)findViewById(R.id.label);
-//                        ((MainActivity)getActivity()).publishService();
-//                        Log.d(MainActivity.TRG,"调用publishService函数成功啦啦啦啦啦啦啦啦啦");
-//                    }
-//                });
-//                builder.show();
                 //调用publishservice函数，写到mainactivity 中。
                 LayoutInflater layoutInflater = LayoutInflater.from(getActivity());
                 final View DialogView = layoutInflater.inflate(R.layout.creategroup,null);
@@ -93,7 +76,6 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                 }).create();
                 dlg.show();
             }
-
         });
         return mContentView;
     }
@@ -114,23 +96,50 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                 return "Unknown";
         }
     }
-    //为ListFragment保存WiFiDevice list 的array adapter
-    public class WifiPeerListAdapter extends ArrayAdapter<WifiP2pDevice>{
-        private List<WifiP2pDevice> items;
-        //适用仅有设备信息
-        public WifiPeerListAdapter(Context context,int textViewResource,List<WifiP2pDevice> object){
-            super(context,textViewResource,object);
-            items = object;
-        }
 
-//        public WifiPeerListAdapter(Context context, int textViewResource, List<wifiDeviceWithLabel> object){
-//            super(context,textViewResource,object);
-//            extendItems = object;
-//        }
-//        public WifiPeerListAdapter(Context context,int textViewResource, List<LinkedHashMap<WifiP2pDevice,String>> object){
+// //   为ListFragment保存WiFiDevice list 的array adapter
+//    public class WifiPeerListAdapter extends ArrayAdapter<WifiP2pDevice>{
+//        private List<WifiP2pDevice> items;
+//        //适用仅有设备信息
+//        public WifiPeerListAdapter(Context context,int textViewResource,List<WifiP2pDevice> object){
 //            super(context,textViewResource,object);
 //            items = object;
 //        }
+//        @Override
+//        public View getView(int position, View convertView, ViewGroup parent){
+//            View v = convertView;
+//            //获取LayoutInflater实例的三种方式之一，但这三种方式在根本上都是调用getSystemService(Context.Layout_inflater_service)
+//            if(v==null){
+//                LayoutInflater vi = (LayoutInflater) getActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+//                v = vi.inflate(R.layout.row_device,null);
+//            }
+//            WifiP2pDevice device = items.get(position);
+//            if(device!=null){
+//                TextView leftTop = v.findViewById(R.id.device_name);
+//                TextView leftBottom = v.findViewById(R.id.device_status);
+//                if(leftTop!=null){
+//                    leftTop.setText(device.deviceName);
+//                }
+//                if(leftBottom!=null){
+//                    leftBottom.setText(getDeviceStatus(device.status));
+//                }
+//            }
+//            return v;
+//        }
+//    }
+
+    public class WifiServiceAdapter extends ArrayAdapter<wifiDeviceWithLabel>{
+//        private List<wifiDeviceWithLabel> items;
+        private List<wifiDeviceWithLabel> options;
+//        public WifiServiceAdapter(Context context, int resource,
+//                                  int textViewResourceId, List<wifiDeviceWithLabel> items) {
+//            super(context, resource, textViewResourceId, items);
+//            this.items = items;
+//        }
+        public WifiServiceAdapter(Context context,int textViewResource,List<wifiDeviceWithLabel> object){
+            super(context,textViewResource,object);
+            this.options = object;
+        }
         @Override
         public View getView(int position, View convertView, ViewGroup parent){
             View v = convertView;
@@ -139,15 +148,21 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                 LayoutInflater vi = (LayoutInflater) getActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
                 v = vi.inflate(R.layout.row_device,null);
             }
-            WifiP2pDevice device = items.get(position);
-            if(device!=null){
-                TextView leftTop = v.findViewById(R.id.device_name);
-                TextView leftBottom = v.findViewById(R.id.device_status);
+            wifiDeviceWithLabel service = options.get(position);
+            if(service!=null){
+                TextView leftTop = (TextView) v.findViewById(R.id.device_name);
+                TextView leftBottom = (TextView)v.findViewById(R.id.device_status);
+                TextView right = (TextView)v.findViewById(R.id.group_label);
+                Log.d(MainActivity.TRG,service.device.deviceName+"-----------------------------"+service.label);
                 if(leftTop!=null){
-                    leftTop.setText(device.deviceName);
+                    Log.d(MainActivity.TRG,service.device.deviceName+"-----------------------------"+service);
+                    leftTop.setText(service.device.deviceName);
                 }
                 if(leftBottom!=null){
-                    leftBottom.setText(getDeviceStatus(device.status));
+                    leftBottom.setText(getDeviceStatus(service.device.status));
+                }
+                if(right!=null){
+                    right.setText(service.label);
                 }
             }
             return v;
@@ -191,26 +206,26 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
 
     //方案二：判断获取的设备是否为组主，过滤出来。
     @Override
-    public void onPeersAvailable(WifiP2pDeviceList peerList){
-        if(processDialog!=null&&processDialog.isShowing()){
-            processDialog.dismiss();
-        }
-        peers.clear();
-        peers.addAll(peerList.getDeviceList());
-        Log.d(MainActivity.TRG,"调用次数"+i++);
-        Log.d(MainActivity.TRG,"周围设备信息："+peers);
-//        for(int i =0;i<peers.size();i++){
-//            if(!peers.get(i).isGroupOwner()){
-//                peers.remove(i);
-//            }
+   public void onPeersAvailable(WifiP2pDeviceList peerList){
+//        if(processDialog!=null&&processDialog.isShowing()){
+//            processDialog.dismiss();
 //        }
-        //重新加载页面notifyDataSetChanged(),这是arrayAdapter中的方法
-        ((WifiPeerListAdapter)getListAdapter()).notifyDataSetChanged();
-        if(peers.size()==0){
-            Log.d(MainActivity.TRG,"No device found");
-            return;
-        }
-
+//        peers.clear();
+//        peers.addAll(peerList.getDeviceList());
+//        Log.d(MainActivity.TRG,"调用次数"+i++);
+//        Log.d(MainActivity.TRG,"周围设备信息："+peers);
+//        //过滤组主
+//        //        for(int i =0;i<peers.size();i++){
+//        //            if(!peers.get(i).isGroupOwner()){
+//        //                peers.remove(i);
+//        //            }
+//        //        }
+//        //重新加载页面notifyDataSetChanged(),这是arrayAdapter中的方法
+//      ((WifiPeerListAdapter)getListAdapter()).notifyDataSetChanged();
+//        if(peers.size()==0){
+//            Log.d(MainActivity.TRG,"No device found");
+//            return;
+//        }
     }
     public interface DeviceActionListener{
       void connect(WifiP2pConfig wifiP2pConfig);

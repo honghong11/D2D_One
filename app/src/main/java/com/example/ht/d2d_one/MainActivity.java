@@ -29,7 +29,8 @@ import android.widget.Toast;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MainActivity extends AppCompatActivity implements DeviceListFragment.DeviceActionListener,WifiP2pManager.DnsSdServiceResponseListener,WifiP2pManager.DnsSdTxtRecordListener{
+public class MainActivity extends AppCompatActivity implements DeviceListFragment.DeviceActionListener,
+        WifiP2pManager.DnsSdServiceResponseListener,WifiP2pManager.DnsSdTxtRecordListener{
     public static final String TXTRECORD_PROP_AVAILABLE = "available";
     public static final String instanceName = "FirstService";
     public static final String serviceType = "_handover._tcp";
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
     private wifiDeviceWithLabel extendDevice;
     private WifiP2pDnsSdServiceRequest serviceRequest;
     private DeviceDetailFragment deviceDetailFragment;
+    private DeviceListFragment  deviceListFragment;
     Context context;
     private final IntentFilter intentfilter = new IntentFilter();
     @Override
@@ -55,12 +57,12 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
         intentfilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
         intentfilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
         intentfilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
+
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         channel = manager.initialize(this, getMainLooper(), null);
-//        DeviceListFragment deviceListFragment = new DeviceListFragment();
-//        getFragmentManager().beginTransaction().add(R.id.linearLayout1,deviceListFragment,"services").commit();
-        deviceDetailFragment = new DeviceDetailFragment();
-        getFragmentManager().beginTransaction().add(R.id.linearLayout1,deviceDetailFragment,"services").commit();
+        //为deviceListFragment 添加tag
+        deviceListFragment = new DeviceListFragment();
+        getFragmentManager().beginTransaction().add(R.id.linearLayout1,deviceListFragment,"services").commit();
     }
 
     public void onResume(){
@@ -83,6 +85,7 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
     public void setIsWifiP2pEnable(boolean isWifiP2pEnable){
         this.isWifiP2pEnabel = isWifiP2pEnable;
     }
+    //菜单栏： 包含开启WiFi和发现服务
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.action_items, menu);
@@ -104,17 +107,20 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
                              Toast.LENGTH_SHORT).show();
                 }
                 else{
-                    manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
-                        @Override
-                        public void onSuccess() {
-                            Toast.makeText(MainActivity.this,"Discovery Initiated",Toast.LENGTH_SHORT).show();
-                        }
-
-                        @Override
-                        public void onFailure(int reason) {
-                            Toast.makeText(MainActivity.this,"Discovery Failed"+ reason ,Toast.LENGTH_SHORT).show();
-                        }
-                    });
+//                    discoverPeers用于发现周围设备，现在用不到，以后可能会用
+//                    manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
+//                        @Override
+//                        public void onSuccess() {
+//                            Toast.makeText(MainActivity.this,"Discovery Initiated",Toast.LENGTH_SHORT).show();
+//                        }
+//
+//                        @Override
+//                        public void onFailure(int reason) {
+//                            Toast.makeText(MainActivity.this,"Discovery Failed"+ reason ,Toast.LENGTH_SHORT).show();
+//                        }
+//                    });
+//必须要调用addServiceRequest函数，而WifiP2pDnsSdServiceRequest.newInstance()中一定是service request for Bonjour，就必须要回调setDnsSdResponseListeners,
+// 而不能调用setServiceResponseListener
                     serviceRequest = WifiP2pDnsSdServiceRequest.newInstance();
                     manager.addServiceRequest(channel, serviceRequest, new WifiP2pManager.ActionListener() {
                         @Override
@@ -127,28 +133,20 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
                             Toast.makeText(MainActivity.this,"add service failed",Toast.LENGTH_SHORT).show();
                         }
                     });
-                    //必须要调用addServiceRequest函数，而WifiP2pDnsSdServiceRequest.newInstance()中一定是service request for Bonjour，就必须要回调setDnsSdResponseListeners
-//                    manager.setServiceResponseListener(channel, new WifiP2pManager.ServiceResponseListener() {
-//                        @Override
-//                        public void onServiceAvailable(int protocolType, byte[] responseData, WifiP2pDevice srcDevice) {
-//                            Log.d(MainActivity.TRG,srcDevice.deviceName+"~~~~~~~~~~~~~~~~~~~~~~~");
-//                        }
-//                    });
+//manager.findFragmentById(); 根据ID来找到对应的Fragment实例，主要用在静态添加fragment的布局中，因为静态添加的fragment才会有ID
+//manager.findFragmentByTag();根据TAG找到对应的Fragment实例，主要用于在动态添加的fragment中，根据TAG来找到fragment实例
+//                    获取响应的服务，并将获取的服务以列表的形式展现出来
                     manager.setDnsSdResponseListeners(channel, new WifiP2pManager.DnsSdServiceResponseListener() {
                         @Override
                         public void onDnsSdServiceAvailable(String instanceName, String registrationType, WifiP2pDevice srcDevice) {
-//manager.findFragmentById(); //根据ID来找到对应的Fragment实例，主要用在静态添加fragment的布局中，因为静态添加的fragment才会有ID
-//manager.findFragmentByTag();//根据TAG找到对应的Fragment实例，主要用于在动态添加的fragment中，根据TAG来找到fragment实例
-//manager.getFragments();//获取所有被ADD进Activity中的Fragment
-//  DeviceListFragment fragment = (DeviceListFragment) getFragmentManager().findFragmentById(R.layout.device_list);
-                            DeviceDetailFragment fragment = (DeviceDetailFragment) getFragmentManager().findFragmentByTag("services");
-                            DeviceDetailFragment.WifiServiceAdapter adapter = (DeviceDetailFragment.WifiServiceAdapter)fragment.getListAdapter();
+                            deviceListFragment = (DeviceListFragment) getFragmentManager().findFragmentByTag("services");
+                            DeviceListFragment.WifiServiceAdapter adapter = (DeviceListFragment.WifiServiceAdapter)deviceListFragment.getListAdapter();
                             wifiDeviceWithLabel service = new wifiDeviceWithLabel();
                             service.device = srcDevice;
                             service.label = instanceName;
                             adapter.add(service);
                             adapter.notifyDataSetChanged();
-                            //((DeviceDetailFragment.WifiServiceAdapter)fragment.getListAdapter()).notifyDataSetChanged();
+                          // ((DeviceListFragment.WifiServiceAdapter)deviceListFragment.getListAdapter()).notifyDataSetChanged();
                             Log.d(MainActivity.TRG, "onBonjourServiceAvailable "
                                     + instanceName);
                             //应该在获取数据的地方调用显示的页面。可以设置一个adapter来处理页面
@@ -229,20 +227,6 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
         String dyInstanceName = string;
         Map<String,String> record = new HashMap<String,String>();
         record.put(TXTRECORD_PROP_AVAILABLE,"visable");
-//        manager.setDnsSdResponseListeners(channel,this,this);
-//        WifiP2pDnsSdServiceRequest wifiP2pDnsSdServiceRequest = WifiP2pDnsSdServiceRequest.newInstance(instanceName,serviceType);
-//        manager.addServiceRequest(channel, wifiP2pDnsSdServiceRequest, new WifiP2pManager.ActionListener() {
-//            @Override
-//            public void onSuccess() {
-//                Log.d(MainActivity.TRG,"添加service discovery request successfullllllllllllllllllll");
-//            }
-//
-//            @Override
-//            public void onFailure(int reason) {
-//                Log.d(MainActivity.TRG,"添加service discovery request failed");
-//            }
-//        });
-
         WifiP2pDnsSdServiceInfo wifiP2pDnsSdServiceInfo = WifiP2pDnsSdServiceInfo.newInstance(dyInstanceName,serviceType,record);
         manager.addLocalService(channel, wifiP2pDnsSdServiceInfo, new WifiP2pManager.ActionListener() {
             @Override

@@ -14,14 +14,14 @@
                 android:id="@+id/list_frag"
                 android:name="com.example.ht.d2d_one.DeviceListFragment"
                 android:layout_width="match_parent"
-                android:layout_height="309dp">
+                android:layout_height="match_parent">
 
             </fragment>
-            <fragment
+            <!-- 现在不用  <fragment
                 android:name="com.example.ht.d2d_one.DeviceDetailFragment"
                 android:id="@+id/detail_frag"
                 android:layout_height="200dp"
                 android:layout_width="match_parent">
-            </fragment>
+            </fragment>-->
         </LinearLayout>
 </LinearLayout>

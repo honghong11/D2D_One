@@ -4,7 +4,7 @@
     android:layout_width="fill_parent"
     android:layout_height="?android:attr/listPreferredItemHeight"
     android:background="?android:attr/activatedBackgroundIndicator">
-    <LinearLayout
+  <!--  <LinearLayout
         android:layout_width="400dp"
         android:layout_height="60dp"
         android:orientation="horizontal">
@@ -36,5 +36,5 @@
             android:layout_width="200dp"
             android:layout_height="60dp"
             android:text="组标签"/>
-    </LinearLayout>
+    </LinearLayout>-->
 </LinearLayout>

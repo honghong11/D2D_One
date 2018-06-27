@@ -20,12 +20,14 @@
                 android:orientation="vertical">
                 <TextView
                     android:id="@+id/device_name"
+                    android:text="HHHH"
                     android:layout_width="200dp"
                     android:layout_height="30dp"
                     android:layout_gravity="center_vertical"/>
 
                 <TextView
                     android:id="@+id/device_status"
+                    android:text="GGG"
                     android:layout_width="200dp"
                     android:layout_height="30dp"
                     android:layout_gravity="center_vertical"
