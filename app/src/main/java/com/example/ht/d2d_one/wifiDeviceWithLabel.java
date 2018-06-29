@@ -9,4 +9,16 @@ import java.util.List;
 public class wifiDeviceWithLabel{
     WifiP2pDevice device = null;
     String label = null;
+    public wifiDeviceWithLabel(String deviceName,int status,String label){
+        device.deviceName = deviceName;
+        device.status = status;
+        this.label = label;
+    }
+    public wifiDeviceWithLabel(WifiP2pDevice device,String label){
+        this.device = device;
+        this.label = label;
+    }
+    public wifiDeviceWithLabel(){
+
+    }
 }

@@ -32,19 +32,27 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
     ProgressDialog processDialog =null;
     WifiP2pDevice wifiP2pDevice;
     WifiP2pManager manager;
-    wifiDeviceWithLabel extendDevice;
     String label = "";
-    private List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
     private List<wifiDeviceWithLabel> epeers = new ArrayList<wifiDeviceWithLabel>();
+    private List<wifiDeviceWithLabel> data = new ArrayList<wifiDeviceWithLabel>();
+    List<wifiDeviceWithLabel> peers = new ArrayList<wifiDeviceWithLabel>();
+    WifiP2pDevice device = new WifiP2pDevice();
 
     public void onActivityCreated(Bundle savedInstanceState){
         super.onActivityCreated(savedInstanceState);
-        //需要将adapter和资源文件关联
-        //this.setListAdapter(new WifiPeerListAdapter(getActivity(),R.layout.row_device,peers));
-        this.setListAdapter(new WifiServiceAdapter(getActivity(),R.layout.row_device,epeers));
+//手动给数据,可以
+        device.deviceName = "11";
+        device.status=1;
+        label = "youxi";
+        wifiDeviceWithLabel wifiDeviceWithLabel = new wifiDeviceWithLabel(device,label);
+        data.add(0,wifiDeviceWithLabel);
+//       this.setListAdapter(new WifiServiceAdapter(getActivity(),R.layout.row_device,data));
+
+
 //        this.setListAdapter(new WifiServiceAdapter(this.getActivity(),
-//                R.layout.row_device, android.R.id.text1,
+//                android.R.layout.simple_list_item_2, android.R.id.text1,
 //                new ArrayList<wifiDeviceWithLabel>()));
+        this.setListAdapter(new WifiServiceAdapter(getActivity(),R.layout.row_device,epeers));
     }
 
     public View onCreateView(LayoutInflater inflater, ViewGroup container,Bundle savedInstanceState){
@@ -129,17 +137,12 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
 //    }
 
     public class WifiServiceAdapter extends ArrayAdapter<wifiDeviceWithLabel>{
-//        private List<wifiDeviceWithLabel> items;
         private List<wifiDeviceWithLabel> options;
-//        public WifiServiceAdapter(Context context, int resource,
-//                                  int textViewResourceId, List<wifiDeviceWithLabel> items) {
-//            super(context, resource, textViewResourceId, items);
-//            this.items = items;
-//        }
-        public WifiServiceAdapter(Context context,int textViewResource,List<wifiDeviceWithLabel> object){
-            super(context,textViewResource,object);
-            this.options = object;
+        public WifiServiceAdapter(Context context,int resource,List<wifiDeviceWithLabel> items){
+            super(context,resource,items);
+            options = items;
         }
+
         @Override
         public View getView(int position, View convertView, ViewGroup parent){
             View v = convertView;
@@ -149,11 +152,12 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                 v = vi.inflate(R.layout.row_device,null);
             }
             wifiDeviceWithLabel service = options.get(position);
+            Log.d(MainActivity.TRG,"000000000"+service);
             if(service!=null){
                 TextView leftTop = (TextView) v.findViewById(R.id.device_name);
                 TextView leftBottom = (TextView)v.findViewById(R.id.device_status);
                 TextView right = (TextView)v.findViewById(R.id.group_label);
-                Log.d(MainActivity.TRG,service.device.deviceName+"-----------------------------"+service.label);
+               // Log.d(MainActivity.TRG,service.device.deviceName+"-----------------------------"+service.label);
                 if(leftTop!=null){
                     Log.d(MainActivity.TRG,service.device.deviceName+"-----------------------------"+service);
                     leftTop.setText(service.device.deviceName);
@@ -166,6 +170,24 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                 }
             }
             return v;
+        }
+        @Override
+        public void add(wifiDeviceWithLabel service){
+            if(epeers.size()==0){
+                epeers.add(service);
+            }else{
+                if (service.device.deviceName != epeers.get(epeers.size()-1).device.deviceName){
+                    epeers.add(service);
+                }
+            }
+            Log.d(MainActivity.TRG,"iiiiiiiiiiiiiiiiii"+epeers.get(0).label);
+            setNotifyOnChange(true);
+            Log.d(MainActivity.TRG,"iiiiiiiiiiiiiiiiii"+epeers.toString());
+        }
+        @Override
+        public void notifyDataSetChanged() {
+            super.notifyDataSetChanged();
+            Log.d(MainActivity.TRG,"tiaoyonglllllllllllllllllllllll");
         }
     }
 
