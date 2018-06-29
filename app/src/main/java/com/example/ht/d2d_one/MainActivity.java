@@ -45,6 +45,7 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
     private WifiP2pDnsSdServiceRequest serviceRequest;
     private DeviceDetailFragment deviceDetailFragment;
     private DeviceListFragment  deviceListFragment;
+    wifiDeviceWithLabel service = new wifiDeviceWithLabel();
     Context context;
     private final IntentFilter intentfilter = new IntentFilter();
     @Override
@@ -136,17 +137,20 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
 //manager.findFragmentById(); 根据ID来找到对应的Fragment实例，主要用在静态添加fragment的布局中，因为静态添加的fragment才会有ID
 //manager.findFragmentByTag();根据TAG找到对应的Fragment实例，主要用于在动态添加的fragment中，根据TAG来找到fragment实例
 //                    获取响应的服务，并将获取的服务以列表的形式展现出来
+//findFragementByTag();会重绘fragment,adapter.add后数据源没有变化，所以notifyDataSetChanged()函数不会执行。
                     manager.setDnsSdResponseListeners(channel, new WifiP2pManager.DnsSdServiceResponseListener() {
                         @Override
                         public void onDnsSdServiceAvailable(String instanceName, String registrationType, WifiP2pDevice srcDevice) {
-                            deviceListFragment = (DeviceListFragment) getFragmentManager().findFragmentByTag("services");
+                           // deviceListFragment = (DeviceListFragment) getFragmentManager().findFragmentByTag("services");
+                            deviceListFragment = (DeviceListFragment) getFragmentManager().findFragmentById(R.id.list_frag);
+                            //deviceListFragment = (DeviceListFragment) getFragmentManager().findFragmentById(R.layout.device_list);
                             DeviceListFragment.WifiServiceAdapter adapter = (DeviceListFragment.WifiServiceAdapter)deviceListFragment.getListAdapter();
-                            wifiDeviceWithLabel service = new wifiDeviceWithLabel();
+
                             service.device = srcDevice;
                             service.label = instanceName;
                             adapter.add(service);
                             adapter.notifyDataSetChanged();
-                          // ((DeviceListFragment.WifiServiceAdapter)deviceListFragment.getListAdapter()).notifyDataSetChanged();
+                          //((DeviceListFragment.WifiServiceAdapter)deviceListFragment.getListAdapter()).notifyDataSetChanged();
                             Log.d(MainActivity.TRG, "onBonjourServiceAvailable "
                                     + instanceName);
                             //应该在获取数据的地方调用显示的页面。可以设置一个adapter来处理页面
