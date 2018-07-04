@@ -145,6 +145,7 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
                             service.device = srcDevice;
                             service.label = instanceName;
                             adapter.add(service);
+                            //数据源未变
                             adapter.notifyDataSetChanged();
                           // ((DeviceListFragment.WifiServiceAdapter)deviceListFragment.getListAdapter()).notifyDataSetChanged();
                             Log.d(MainActivity.TRG, "onBonjourServiceAvailable "
