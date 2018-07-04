@@ -24,6 +24,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 public class DeviceListFragment extends ListFragment implements WifiP2pManager.PeerListListener{
@@ -33,10 +34,18 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
     WifiP2pDevice wifiP2pDevice;
     WifiP2pManager manager;
     String label = "";
+    private wifiDeviceWithLabel wifiDeviceWithLabel = new wifiDeviceWithLabel();
     private List<wifiDeviceWithLabel> epeers = new ArrayList<wifiDeviceWithLabel>();
+    private List<wifiDeviceWithLabel> test = new ArrayList<wifiDeviceWithLabel>();
+    private List<WifiP2pDevice> deviceList = new ArrayList<WifiP2pDevice>();
     private List<wifiDeviceWithLabel> data = new ArrayList<wifiDeviceWithLabel>();
     List<wifiDeviceWithLabel> peers = new ArrayList<wifiDeviceWithLabel>();
     WifiP2pDevice device = new WifiP2pDevice();
+    private String string = "/";
+    private String string_instaname = "/";
+    private String string1 = "";
+    String[]strings = null;
+    String[]labels = null;
 
     public void onActivityCreated(Bundle savedInstanceState){
         super.onActivityCreated(savedInstanceState);
@@ -61,6 +70,7 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
             @Override
             public void onClick(View v) {
                 ((DeviceActionListener)getActivity()).disconnect();
+                ((DeviceActionListener)getActivity()).removeLocalService();
             }
         });
         mContentView.findViewById(R.id.createGroup).setOnClickListener(new View.OnClickListener() {
@@ -75,11 +85,10 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         ((DeviceActionListener)getActivity()).createGroup();
-                        Log.d(MainActivity.TRG,"调用createGroup函数成功啦啦啦啦啦啦啦啦啦");
                         EditText editText = (EditText)DialogView.findViewById(R.id.label);
                         label = editText.getText().toString();
                         ((MainActivity)getActivity()).publishService(label);
-                        Log.d(MainActivity.TRG,"调用publishService函数成功啦啦啦啦啦啦啦啦啦");
+                        Log.d(MainActivity.TRG,"调用publishService函数成功啦啦啦啦啦啦啦啦啦"+label);
                     }
                 }).create();
                 dlg.show();
@@ -135,7 +144,6 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
 //            return v;
 //        }
 //    }
-
     public class WifiServiceAdapter extends ArrayAdapter<wifiDeviceWithLabel>{
         private List<wifiDeviceWithLabel> options;
         public WifiServiceAdapter(Context context,int resource,List<wifiDeviceWithLabel> items){
@@ -171,23 +179,112 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
             }
             return v;
         }
+//        @Override
+//        public void add(wifiDeviceWithLabel service){
+//            if(epeers.size()==0){
+//                epeers.add(service);
+//                Log.d(MainActivity.TRG,epeers.get(0).device.deviceName);
+//            }else{
+//                if (service.device.deviceName != epeers.get(epeers.size()-1).device.deviceName){
+//                    epeers.add(service);
+//                }
+//            }
+//            Log.d(MainActivity.TRG,"iiiiiiiiiiiiiiiiii"+epeers.size());
+////            //setNotifyOnChange(true);
+////            Log.d(MainActivity.TRG,"iiiiiiiiiiiiiiiiii"+epeers.toString());
+//        }
+
+
         @Override
-        public void add(wifiDeviceWithLabel service){
+        public void add(wifiDeviceWithLabel wifiDeviceWithLabel){
+            Log.d("每次调用add时传入的参数：",wifiDeviceWithLabel.device.deviceName);
+            test.add(wifiDeviceWithLabel);
             if(epeers.size()==0){
-                epeers.add(service);
+                epeers.add(wifiDeviceWithLabel);
+                deviceList.add(wifiDeviceWithLabel.device);
+                string = string+wifiDeviceWithLabel.device.deviceName+"/";
+                string_instaname = string_instaname+wifiDeviceWithLabel.label+"/";
+                string1 = string1+"/"+wifiDeviceWithLabel.device.deviceName;
+                strings = string.split("/");
+                labels = string_instaname.split("/");
             }else{
-                if (service.device.deviceName != epeers.get(epeers.size()-1).device.deviceName){
-                    epeers.add(service);
-                }
+                string1 = string1+"/"+wifiDeviceWithLabel.device.deviceName;
+                    strings = string.split("/");
+                    labels = string_instaname.split("/");
+                    int count =strings.length;
+                    for(int i =0 ;i<strings.length;i++){
+                        Log.d("判断外的具体情况：",wifiDeviceWithLabel.device.deviceName+"----"+strings[i]);
+                        if(!wifiDeviceWithLabel.device.deviceName.equals(strings[i])){
+                            count--;
+                            Log.d("判断内的具体情况：",wifiDeviceWithLabel.device.deviceName+"----"+strings[i]);
+                        }
+                    }
+                    Log.d("count的值:",String.valueOf(count));
+                    if(count == 0){
+                        epeers.add(wifiDeviceWithLabel);
+                        deviceList.add(wifiDeviceWithLabel.device);
+                        string = string+wifiDeviceWithLabel.device.deviceName+"/";
+                        string_instaname = string_instaname+wifiDeviceWithLabel.label+"/";
+                        strings = string.split("/");
+                        labels = string_instaname.split("/");
+                    }
             }
-            Log.d(MainActivity.TRG,"iiiiiiiiiiiiiiiiii"+epeers.get(0).label);
-            setNotifyOnChange(true);
-            Log.d(MainActivity.TRG,"iiiiiiiiiiiiiiiiii"+epeers.toString());
+            Log.d("stirng中情况：",string);
+            Log.d("string_instaname中情况：",string_instaname);
+            Log.d("eppers.size::::",String.valueOf(epeers.size()));
+            Log.d("deviceList.size::::",String.valueOf(deviceList.size()));
+            List<wifiDeviceWithLabel> updateList = new ArrayList<wifiDeviceWithLabel>();
+            for(int i =0;i<strings.length;i++){
+                //Log.d("eppers中的情况:",epeers.get(i).deviceName);
+                Log.d(".......stirngs中情况：",strings[i]);
+                Log.d(".......labels中情况：",labels[i]);
+            }
+            for(int i =0;i<test.size();i++){
+                Log.d("test列表的情况：",test.get(i).device.deviceName);
+            }
+            for(int i =0;i<epeers.size();i++){
+                Log.d("eppers列表的情况：",epeers.get(i).device.deviceName);
+            }
+            for(int i =0;i<deviceList.size();i++){
+                //Log.d("eppers中的情况:",epeers.get(i).deviceName);
+                Log.d("stirngs中情况：",strings[i]);
+                Log.d("labels中情况：",labels[i]);
+                updateList.add(new wifiDeviceWithLabel(deviceList.get(i),labels[i+1]));
+            }
+            epeers.clear();
+            epeers.addAll(updateList);
+
+            notifyDataSetChanged();
+           // Log.d("eppers 中情况",string);
         }
-        @Override
-        public void notifyDataSetChanged() {
-            super.notifyDataSetChanged();
-            Log.d(MainActivity.TRG,"tiaoyonglllllllllllllllllllllll");
+
+//    @Override
+//        public void add(wifiDeviceWithLabel service){
+//            //super.add(service);
+//            if(epeers.size()==0){
+//                epeers.add(service);
+//                listTest.add(service);
+//                Log.d("是不是每个服务都会出现一个新的eppers呢？",epeers.get(0).device.deviceName+"/"+listTest.get(0).device.deviceName);
+//            }else{
+//                Log.d("不每次创建eppers那eppers中内容：",epeers.get(0).device.deviceName+"/"+epeers.get(epeers.size()-1).device.deviceName+"/"
+//                        +service.device.deviceName+"/"+epeers.size());
+//                if (service.device.deviceName != epeers.get(epeers.size()-1).device.deviceName){
+//                    epeers.add(service);
+//                    Log.d("不加入,你是怎么显示的？",epeers.get(0).device.deviceName+epeers.get(1).device.deviceName);
+//                }
+//                Log.d("listTest中内容：",listTest.get(0).device.deviceName+"/"+listTest.get(epeers.size()-1).device.deviceName+"/"
+//                        +service.device.deviceName+"/"+listTest.size());
+//                if(service.device.deviceName!= listTest.get(listTest.size()-1).device.deviceName){
+//                    listTest.add(service);
+//                    Log.d("另一个list会不回有效果",listTest.get(0).device.deviceName+listTest.get(1).device.deviceName);
+//                }
+//            }
+//            notifyDataSetChanged();
+//        }
+
+    public void add(List<wifiDeviceWithLabel> serviceList){
+            epeers.addAll(serviceList);
+            notifyDataSetChanged();
         }
     }
 
@@ -254,5 +351,6 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
       void disconnect();
       void publishService(String string);
       void createGroup();
+      void removeLocalService();
     }
 }

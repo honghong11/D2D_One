@@ -26,7 +26,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements DeviceListFragment.DeviceActionListener,
@@ -46,6 +48,12 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
     private DeviceDetailFragment deviceDetailFragment;
     private DeviceListFragment  deviceListFragment;
     wifiDeviceWithLabel service = new wifiDeviceWithLabel();
+    private int count =0;
+
+//localService 的添加和移除
+
+    private String getInstanceName ="";
+
     Context context;
     private final IntentFilter intentfilter = new IntentFilter();
     @Override
@@ -145,16 +153,17 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
                             deviceListFragment = (DeviceListFragment) getFragmentManager().findFragmentById(R.id.list_frag);
                             //deviceListFragment = (DeviceListFragment) getFragmentManager().findFragmentById(R.layout.device_list);
                             DeviceListFragment.WifiServiceAdapter adapter = (DeviceListFragment.WifiServiceAdapter)deviceListFragment.getListAdapter();
-
                             service.device = srcDevice;
                             service.label = instanceName;
                             adapter.add(service);
-                            //数据源未变
-                            adapter.notifyDataSetChanged();
-                          //((DeviceListFragment.WifiServiceAdapter)deviceListFragment.getListAdapter()).notifyDataSetChanged();
+                            count++;
+                            Log.d(MainActivity.TRG,"adapter中的service的个数"+adapter.getCount()+"调用add次数"+String.valueOf(count));
+//                            if(adapter.getCount()==0){
+//                                adapter.clear();
+//                            }
+                            //adapter.notifyDataSetChanged();
                             Log.d(MainActivity.TRG, "onBonjourServiceAvailable "
                                     + instanceName);
-                            //应该在获取数据的地方调用显示的页面。可以设置一个adapter来处理页面
                         }
                     }, new WifiP2pManager.DnsSdTxtRecordListener() {
                         @Override
@@ -227,9 +236,28 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
         });
     }
     @Override
+    public void removeLocalService(){
+        Map<String,String> record = new HashMap<String,String>();
+        record.put(TXTRECORD_PROP_AVAILABLE,"visable");
+        WifiP2pDnsSdServiceInfo wifiP2pDnsSdServiceInfo = WifiP2pDnsSdServiceInfo.newInstance(getInstanceName,serviceType,record);
+        manager.removeLocalService(channel, wifiP2pDnsSdServiceInfo, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Log.d(MainActivity.TRG,"rrrrrrrrrrrrrrrrrrrrrrrrrrrremovelocalService successful");
+            }
+
+            @Override
+            public void onFailure(int reason) {
+                Log.d(MainActivity.TRG,"Failed rrrrrrrrrrrremovelocalServiceeeeeeeeeeeeeeeeeee"+reason);
+            }
+        });
+    }
+    @Override
     public void publishService(String string){
         //现在理解的instanceName就是所发布的服务,那么问题就是如何将instanceName的内容显示到组标签中。
         String dyInstanceName = string;
+        getInstanceName = dyInstanceName;
+        Log.d(MainActivity.TRG,getInstanceName+"yiyiyiyiyiyiyiyiyiyiyiyi");
         Map<String,String> record = new HashMap<String,String>();
         record.put(TXTRECORD_PROP_AVAILABLE,"visable");
         WifiP2pDnsSdServiceInfo wifiP2pDnsSdServiceInfo = WifiP2pDnsSdServiceInfo.newInstance(dyInstanceName,serviceType,record);
@@ -241,7 +269,7 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
 
             @Override
             public void onFailure(int reason) {
-                    Log.d(MainActivity.TRG,"Failed addlocalServiceeeeeeeeeeeeeeeeeee");
+                    Log.d(MainActivity.TRG,"Failed addlocalServiceeeeeeeeeeeeeeeeeee"+reason);
             }
         });
     }
