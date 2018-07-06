@@ -6,7 +6,6 @@ import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class WifiDeviceWithLabel {
     private WifiP2pDevice device;
     private String label;
