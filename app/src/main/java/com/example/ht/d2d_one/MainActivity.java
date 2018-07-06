@@ -1,7 +1,5 @@
 package com.example.ht.d2d_one;
 
-import android.app.Activity;
-import android.app.ListFragment;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -9,10 +7,7 @@ import android.content.IntentFilter;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
-import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.net.wifi.WifiManager;
-import android.net.wifi.WifiInfo;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
 import android.provider.Settings;
@@ -22,13 +17,9 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements DeviceListFragment.DeviceActionListener,
@@ -41,13 +32,8 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
     private WifiP2pManager.Channel channel;
     private boolean isWifiP2pEnabel = false;
     private BroadcastReceiver receiver =null;
-    private WifiP2pDevice wifiP2pDevice ;
-    private WifiP2pDeviceList wifiP2pDeviceList;
-    private wifiDeviceWithLabel extendDevice;
     private WifiP2pDnsSdServiceRequest serviceRequest;
-    private DeviceDetailFragment deviceDetailFragment;
     private DeviceListFragment  deviceListFragment;
-    wifiDeviceWithLabel service = new wifiDeviceWithLabel();
     private int count =0;
 
 //localService 的添加和移除
@@ -153,8 +139,7 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
                             deviceListFragment = (DeviceListFragment) getFragmentManager().findFragmentById(R.id.list_frag);
                             //deviceListFragment = (DeviceListFragment) getFragmentManager().findFragmentById(R.layout.device_list);
                             DeviceListFragment.WifiServiceAdapter adapter = (DeviceListFragment.WifiServiceAdapter)deviceListFragment.getListAdapter();
-                            service.device = srcDevice;
-                            service.label = instanceName;
+                            WifiDeviceWithLabel service = new WifiDeviceWithLabel(srcDevice,instanceName);
                             adapter.add(service);
                             count++;
                             Log.d(MainActivity.TRG,"adapter中的service的个数"+adapter.getCount()+"调用add次数"+String.valueOf(count));
@@ -195,19 +180,7 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
     public void onDnsSdTxtRecordAvailable(String fullDomainName, Map<String, String> txtRecordMap, WifiP2pDevice srcDevice){
 
     }
-//    public void updateThisDevice(WifiP2pDevice wifiP2pDevice){
-//             this.wifiP2pDevice = wifiP2pDevice;
-//             Log.d("更新本设备信息：：：：：",wifiP2pDevice.toString());
-//    }
 
-//    public  static String getWifiMac(Context ctx) {
-//        WifiManager wifi = (WifiManager) ctx.getSystemService(Context.WIFI_SERVICE);
-//        WifiInfo info = wifi.getConnectionInfo();
-//        String str = info.getMacAddress();
-//        if (str == null) str = "";
-//        Log.d("0000000000000000",str);
-//        return str;
-//    }
     @Override
     public void connect(final WifiP2pConfig wifiP2pConfig){
         manager.connect(channel, wifiP2pConfig, new WifiP2pManager.ActionListener() {

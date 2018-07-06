@@ -22,7 +22,7 @@ public class DeviceDetailFragment extends ListFragment{
         super.onActivityCreated(saveInstanceState);
 //        this.setListAdapter(new DeviceDetailFragment.WifiServiceAdapter(this.getActivity(),
 //                R.layout.service_list, android.R.id.text1,
-//                new ArrayList<wifiDeviceWithLabel>()));
+//                new ArrayList<WifiDeviceWithLabel>()));
     }
 
     public View onCreateView(LayoutInflater inflater, ViewGroup containter, Bundle saveInstanceState){
@@ -30,10 +30,10 @@ public class DeviceDetailFragment extends ListFragment{
         return mContentView;
     }
     //将service_list.xml和WifiServiceListAdapter相关联
-//    public class WifiServiceAdapter extends ArrayAdapter<wifiDeviceWithLabel>{
-//        private List<wifiDeviceWithLabel> items;
+//    public class WifiServiceAdapter extends ArrayAdapter<WifiDeviceWithLabel>{
+//        private List<WifiDeviceWithLabel> items;
 //        public WifiServiceAdapter(Context context, int resource,
-//                                   int textViewResourceId, List<wifiDeviceWithLabel> items) {
+//                                   int textViewResourceId, List<WifiDeviceWithLabel> items) {
 //            super(context, resource, textViewResourceId, items);
 //            this.items = items;
 //        }
@@ -45,9 +45,9 @@ public class DeviceDetailFragment extends ListFragment{
 //                LayoutInflater vi = (LayoutInflater) getActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 //                v = vi.inflate(R.layout.service_list,null);
 //            }
-//            wifiDeviceWithLabel service = items.get(position);
+//            WifiDeviceWithLabel service = items.get(position);
 //            String string = label;
-////            wifiDeviceWithLabel extendDevice = extendItems.get(position);
+////            WifiDeviceWithLabel extendDevice = extendItems.get(position);
 //            if(service!=null){
 //                TextView leftTop = v.findViewById(R.id.service_name);
 //                TextView leftBottom = v.findViewById(R.id.service_status);
