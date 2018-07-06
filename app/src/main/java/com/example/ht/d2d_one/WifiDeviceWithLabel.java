@@ -9,18 +9,14 @@ import java.util.List;
 public class WifiDeviceWithLabel {
     private WifiP2pDevice device;
     private String label;
-    public String getLabel() {
-        return label;
-    }
-
-    public void setLabel(String label) {
+    public WifiDeviceWithLabel(String deviceName, int status, String label){
+        device.deviceName = deviceName;
+        device.status = status;
         this.label = label;
     }
-
     public WifiDeviceWithLabel(WifiP2pDevice device, String label){
         this.device = device;
         this.label = label;
-
     }
 
     public WifiP2pDevice getDevice() {
@@ -29,5 +25,13 @@ public class WifiDeviceWithLabel {
 
     public void setDevice(WifiP2pDevice device) {
         this.device = device;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
     }
 }
