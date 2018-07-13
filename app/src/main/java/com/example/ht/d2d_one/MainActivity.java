@@ -7,6 +7,7 @@ import android.content.IntentFilter;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
+import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
@@ -17,13 +18,18 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements DeviceListFragment.DeviceActionListener,
-        WifiP2pManager.DnsSdServiceResponseListener,WifiP2pManager.DnsSdTxtRecordListener{
+        WifiP2pManager.DnsSdServiceResponseListener,WifiP2pManager.DnsSdTxtRecordListener,Serializable{
     public static final String TXTRECORD_PROP_AVAILABLE = "available";
     public static final String instanceName = "FirstService";
     public static final String serviceType = "_handover._tcp";
@@ -182,15 +188,24 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
     }
 
     @Override
-    public void connect(final WifiP2pConfig wifiP2pConfig){
+    public void connect(final WifiP2pConfig wifiP2pConfig, final WifiP2pDevice wifiP2pDevice){
         manager.connect(channel, wifiP2pConfig, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
+                //设备详细信息，用于进组之后的操作，作为Main2Activity第二页面。
+                int deviceStatus = wifiP2pDevice.status;
+                Log.d("组主的状态：：：：",String.valueOf(deviceStatus));
+                //本设备的状态为connected的时候，进入第二个页面
+
             }
 
             @Override
             public void onFailure(int reason) {
-                Toast.makeText(MainActivity.this,"connect failed, retry.原因为："+reason,Toast.LENGTH_SHORT).show();
+                    //移除在服务列表中的该设备
+                    DeviceListFragment.WifiServiceAdapter adapter = (DeviceListFragment.WifiServiceAdapter)deviceListFragment.getListAdapter();
+                    WifiDeviceWithLabel wifiDeviceWithLabel = new WifiDeviceWithLabel(wifiP2pDevice);
+                    adapter.remove(wifiDeviceWithLabel);
+                    Toast.makeText(MainActivity.this,"该服务已过时",Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -246,7 +261,6 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
             }
         });
     }
-
     @Override
     public void createGroup() {
         manager.createGroup(channel, new WifiP2pManager.ActionListener() {
@@ -258,6 +272,27 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
             @Override
             public void onFailure(int reason) {
                 Toast.makeText(MainActivity.this, "failed to createGroup",Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    @Override
+    public void requestGroupInfo(){
+        manager.requestGroupInfo(channel, new WifiP2pManager.GroupInfoListener() {
+            @Override
+            public void onGroupInfoAvailable(WifiP2pGroup group) {
+                ArrayList<WifiP2pDevice> list = new ArrayList<WifiP2pDevice>();
+                Collection<WifiP2pDevice> deviceList = group.getClientList();
+                Log.d("组内成员个数--：：：：",String.valueOf(deviceList.size()));
+                list.addAll(group.getClientList());
+                Log.d("组内成员个数：：：：",String.valueOf(group.getClientList().size()));
+                Log.d("组内成员列表信息：：：：",group.getClientList().toString());
+                Log.d("组情况信息：：：：",group.toString());
+
+                Intent intent = new Intent(MainActivity.this,Main2Activity.class);
+                Bundle bundle = new Bundle();
+                bundle.putParcelableArrayList("clientList",list);
+                intent.putExtras(bundle);
+                startActivity(intent);
             }
         });
     }
