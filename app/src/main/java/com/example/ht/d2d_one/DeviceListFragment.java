@@ -4,6 +4,7 @@ import android.app.ListFragment;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -22,6 +23,8 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class DeviceListFragment extends ListFragment implements WifiP2pManager.PeerListListener{
     public int i=1;
@@ -30,11 +33,14 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
     WifiP2pDevice wifiP2pDevice;
     WifiP2pManager manager;
     String label = "";
+    ProgressDialog progressDialog = null;
+    Boolean isGO = false;
     private List<WifiDeviceWithLabel> ePeers = new ArrayList<WifiDeviceWithLabel>();
     private List<WifiDeviceWithLabel> test = new ArrayList<WifiDeviceWithLabel>();
     private List<WifiP2pDevice> deviceList = new ArrayList<WifiP2pDevice>();
     private String string = "/";
     private String string1 = "";
+    private int updateTime =0;
 
     public void onActivityCreated(Bundle savedInstanceState){
         super.onActivityCreated(savedInstanceState);
@@ -47,7 +53,10 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
             @Override
             public void onClick(View v) {
                 ((DeviceActionListener)getActivity()).disconnect();
-                ((DeviceActionListener)getActivity()).removeLocalService();
+                Log.d("本设备是不是组主？？？",String.valueOf(isGO));
+                if(isGO){
+                    ((DeviceActionListener)getActivity()).removeLocalService();
+                }
             }
         });
         mContentView.findViewById(R.id.createGroup).setOnClickListener(new View.OnClickListener() {
@@ -130,7 +139,7 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
         @Override
         public void add(WifiDeviceWithLabel WifiDeviceWithLabel){
             Log.d("每次调用add时传入的参数：", WifiDeviceWithLabel.getDevice().deviceName);
-            test.add(WifiDeviceWithLabel);
+            updateTime++;
             if(ePeers.size()==0){
                 ePeers.add(WifiDeviceWithLabel);
                 deviceList.add(WifiDeviceWithLabel.getDevice());
@@ -155,6 +164,19 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
             Log.d("stirng中情况：",string);
             Log.d("eppers.size::::",String.valueOf(ePeers.size()));
             Log.d("deviceList.size::::",String.valueOf(deviceList.size()));
+            //在5秒内，触发一次discovery Service,将结果放到test中，比较ePeers 和 test,如果相同，则，不调用notifyDataSetChanged,如果不同，将test赋给ePeers并清空test,调用notify。
+            //问题是，如果不触发discovery 能接收到信息吗？ 好像可以接收额外的信息。将test，清空，看看test会不会有内容。
+            notifyDataSetChanged();
+        }
+
+        @Override
+        public void remove(WifiDeviceWithLabel wifiDeviceWithLabel){
+            String name = wifiDeviceWithLabel.getDevice().deviceName;
+            for(int i =0;i<ePeers.size();i++){
+                if(name.equals(ePeers.get(i).getDevice().deviceName)){
+                    ePeers.remove(i);
+                }
+            }
             notifyDataSetChanged();
         }
     }
@@ -164,6 +186,7 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
         wifiP2pDevice.status = device.status;
     }
     public void updateThisDevice(WifiP2pDevice wifiP2pDevice){
+        isGO = wifiP2pDevice.isGroupOwner();
         update(wifiP2pDevice,wifiP2pDevice.status);
         TextView textView = (TextView) mContentView.findViewById(R.id.my_name);
         textView.setText(wifiP2pDevice.deviceName);
@@ -171,22 +194,36 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
         textView.setText(getDeviceStatus(wifiP2pDevice.status));
         //wifiP2pDevice.status修改设备状态，需要设备和wifiP2pDevice 对象关联
         Log.d("更新本设备信息：：：：：",wifiP2pDevice.toString());
+
+        //当设备状态更改，变为connected，设备进入组内页面，并将该设备对应的组的信息展示到组页面中。
+        String myStatus = new String();
+        myStatus = textView.getText().toString();
+        List<WifiP2pDevice> groupClientList = new ArrayList<>();
+        if(myStatus.equals("Connected")){
+            //如果设备信息更新为connected，则显示进组按钮
+            mContentView.findViewById(R.id.interGroup).setVisibility(View.VISIBLE);
+            mContentView.findViewById(R.id.interGroup).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ((MainActivity)getActivity()).requestGroupInfo();
+                }
+            });
+        }else if(myStatus.equals("Available")){
+            mContentView.findViewById(R.id.interGroup).setVisibility(View.GONE);
+        }
+
     }
     @Override
     //点击目标节点，获取目标节点的信息
     public void onListItemClick(ListView l, View v, int position, long id) {
-        WifiP2pDevice Device = (WifiP2pDevice) getListAdapter().getItem(position);
+        WifiDeviceWithLabel service = (WifiDeviceWithLabel) getListAdapter().getItem(position);
+        WifiP2pDevice device = service.getDevice();
         WifiP2pConfig wifiP2pConfig = new WifiP2pConfig();
-        wifiP2pConfig.deviceAddress = Device.deviceAddress;
+        wifiP2pConfig.deviceAddress = device.deviceAddress;
         wifiP2pConfig.wps.setup = WpsInfo.PBC;
-        Log.d("DEVICE---------",Device.toString());
-        ((DeviceActionListener)getActivity()).connect(wifiP2pConfig);
-
-//设备详细信息，用于进组之后的操作，作为Main2Activity第二页面。现在先不管了。。
-//        String device = new String();
-//        Intent intent = new Intent(getActivity(),Main2Activity.class);
-//        intent.putExtra(device,Device.toString());
-//        startActivity(intent);
+        Log.d("DEVICE---------",device.toString());
+        //这个device是组主，可以获取相关的组信息吗？
+        ((DeviceActionListener)getActivity()).connect(wifiP2pConfig,device);
     }
 
 //    @Override WifiP2pGroupList类是隐藏的，所以需要用反射机制（方案一：获取附近组的列表）
@@ -218,10 +255,11 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
 //        }
     }
     public interface DeviceActionListener{
-      void connect(WifiP2pConfig wifiP2pConfig);
+      void connect(WifiP2pConfig wifiP2pConfig,WifiP2pDevice wifiP2pDevice);
       void disconnect();
       void publishService(String string);
       void createGroup();
       void removeLocalService();
+      void requestGroupInfo();
     }
 }

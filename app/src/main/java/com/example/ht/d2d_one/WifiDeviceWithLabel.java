@@ -20,7 +20,10 @@ public class WifiDeviceWithLabel {
     public WifiDeviceWithLabel(WifiP2pDevice device, String label){
         this.device = device;
         this.label = label;
+    }
 
+    public WifiDeviceWithLabel(WifiP2pDevice device){
+        this.device = device;
     }
 
     public WifiP2pDevice getDevice() {
