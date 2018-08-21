@@ -262,7 +262,7 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
         });
     }
     @Override
-    public void createGroup() {
+    public void createGroup(WifiP2pDevice wifiP2pDevice) {
         manager.createGroup(channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
@@ -274,6 +274,8 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
                 Toast.makeText(MainActivity.this, "failed to createGroup",Toast.LENGTH_SHORT).show();
             }
         });
+        Log.d("建组成功啦！！！！！！",String.valueOf(wifiP2pDevice.isGroupOwner()));
+        Log.d("建组成功啦！！！！！！该设备名为：：：",wifiP2pDevice.deviceName);
     }
     @Override
     public void requestGroupInfo(){

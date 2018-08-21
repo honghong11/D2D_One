@@ -45,6 +45,10 @@ public class WifiDirectBroadcastReceiver extends BroadcastReceiver {
             }
             NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
             if(networkInfo.isConnected()){
+                manager.requestConnectionInfo(channel,(WifiP2pManager.ConnectionInfoListener)mainActivity
+                        .getFragmentManager().findFragmentById(R.id.list_frag));
+                manager.requestGroupInfo(channel,(WifiP2pManager.GroupInfoListener)mainActivity
+                        .getFragmentManager().findFragmentById(R.id.list_frag));
             }
         }
         else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)){
