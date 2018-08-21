@@ -4,11 +4,12 @@ import android.app.ListFragment;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pDeviceList;
+import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
@@ -20,20 +21,55 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.example.ht.d2d_one.communication.ClientSocket;
+import com.example.ht.d2d_one.communication.MyServerSocket;
+import com.example.ht.d2d_one.util.FindResources;
+
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.Map;
 
-public class DeviceListFragment extends ListFragment implements WifiP2pManager.PeerListListener{
+public class DeviceListFragment extends ListFragment implements WifiP2pManager.PeerListListener,
+        WifiP2pManager.ConnectionInfoListener,WifiP2pManager.GroupInfoListener{
     public int i=1;
     View mContentView = null;
     ProgressDialog processDialog =null;
-    WifiP2pDevice wifiP2pDevice;
+    private  WifiP2pDevice mWifiP2pDevice;
+    private  WifiP2pInfo mWifiP2pInfo;
+    private WifiP2pGroup mWifiP2pGroup;
+    public WifiP2pDevice getmWifiP2pDevice() {
+        return mWifiP2pDevice;
+    }
+
+    public void setmWifiP2pDevice(WifiP2pDevice mWifiP2pDevice) {
+        this.mWifiP2pDevice = mWifiP2pDevice;
+    }
+
+    public WifiP2pInfo getmWifiP2pInfo() {
+        return mWifiP2pInfo;
+    }
+
+    public void setmWifiP2pInfo(WifiP2pInfo mWifiP2pInfo) {
+        this.mWifiP2pInfo = mWifiP2pInfo;
+    }
+
+    public WifiP2pGroup getmWifiP2pGroup() {
+        return mWifiP2pGroup;
+    }
+
+    public void setmWifiP2pGroup(WifiP2pGroup mWifiP2pGroup) {
+        this.mWifiP2pGroup = mWifiP2pGroup;
+    }
+
     WifiP2pManager manager;
     String label = "";
     ProgressDialog progressDialog = null;
+    Boolean isGroupMemberNull = true;
     Boolean isGO = false;
     private List<WifiDeviceWithLabel> ePeers = new ArrayList<WifiDeviceWithLabel>();
     private List<WifiDeviceWithLabel> test = new ArrayList<WifiDeviceWithLabel>();
@@ -53,7 +89,6 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
             @Override
             public void onClick(View v) {
                 ((DeviceActionListener)getActivity()).disconnect();
-                Log.d("本设备是不是组主？？？",String.valueOf(isGO));
                 if(isGO){
                     ((DeviceActionListener)getActivity()).removeLocalService();
                 }
@@ -70,7 +105,7 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                         setPositiveButton("publish", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        ((DeviceActionListener)getActivity()).createGroup();
+                        ((DeviceActionListener)getActivity()).createGroup(mWifiP2pDevice);
                         EditText editText = (EditText)DialogView.findViewById(R.id.label);
                         label = editText.getText().toString();
                         ((MainActivity)getActivity()).publishService(label);
@@ -182,33 +217,87 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
     }
 
     public void update(WifiP2pDevice device,int status){
-        this.wifiP2pDevice = device;
-        wifiP2pDevice.status = device.status;
+        this.mWifiP2pDevice = device;
+        mWifiP2pDevice.status = device.status;
     }
-    public void updateThisDevice(WifiP2pDevice wifiP2pDevice){
-        isGO = wifiP2pDevice.isGroupOwner();
-        update(wifiP2pDevice,wifiP2pDevice.status);
+    public void updateThisDevice(WifiP2pDevice Device){
+        mWifiP2pDevice = Device;
+        //isGO = mWifiP2pDevice.isGroupOwner();
+        Log.d("本设备是不是组主？？？","mWifiP2pDevice.isGroupOwner()"+"="+String.valueOf(isGO));
+        update(mWifiP2pDevice,mWifiP2pDevice.status);
         TextView textView = (TextView) mContentView.findViewById(R.id.my_name);
-        textView.setText(wifiP2pDevice.deviceName);
+        textView.setText(mWifiP2pDevice.deviceName);
         textView = (TextView) mContentView.findViewById(R.id.my_status);
-        textView.setText(getDeviceStatus(wifiP2pDevice.status));
+        textView.setText(getDeviceStatus(mWifiP2pDevice.status));
         //wifiP2pDevice.status修改设备状态，需要设备和wifiP2pDevice 对象关联
-        Log.d("更新本设备信息：：：：：",wifiP2pDevice.toString());
+        Log.d("更新本设备信息：：：：：",mWifiP2pDevice.toString());
 
         //当设备状态更改，变为connected，设备进入组内页面，并将该设备对应的组的信息展示到组页面中。
         String myStatus = new String();
         myStatus = textView.getText().toString();
         List<WifiP2pDevice> groupClientList = new ArrayList<>();
         if(myStatus.equals("Connected")){
-            //如果设备信息更新为connected，则显示进组按钮
             mContentView.findViewById(R.id.interGroup).setVisibility(View.VISIBLE);
-            mContentView.findViewById(R.id.interGroup).setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    ((MainActivity)getActivity()).requestGroupInfo();
-                }
-            });
-        }else if(myStatus.equals("Available")){
+                //如果设备信息更新为connected，则显示进组按钮
+                mContentView.findViewById(R.id.interGroup).setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        ((MainActivity)getActivity()).requestGroupInfo();
+                        //在点击interGroup之后，搜索本机资源，利用socket传给组主（后台处理，用户透明）
+                        //遍历本机，获取所有的资源
+                        FindResources findResources = new FindResources();
+                        Map<String,List<String>> thisDeviceResources =  findResources.getResources();
+                        List<String> movies = new ArrayList<>();
+                        List<String> musics = new ArrayList<>();
+                        List<String> packages = new ArrayList<>();
+                        List<String> words = new ArrayList<>();
+                        String resource = "";
+                        for(Map.Entry<String,List<String>>entry:thisDeviceResources.entrySet()){
+                            Log.d("本设备的资源清单：：：",entry.getValue()+"hhh");
+                            if(entry.getKey().equals("movie")){
+                                movies = entry.getValue();
+                            }
+                            if(entry.getKey().equals("music")){
+                                musics = entry.getValue();
+                            }
+                            if(entry.getKey().equals("package")){
+                                packages = entry.getValue();
+                            }
+                            if(entry.getKey().equals("word")){
+                                words = entry.getValue();
+                            }
+                        }
+                        for(int i =0;i<movies.size();i++){
+                            resource = resource + movies.get(i);
+                        }
+                        resource = resource +"movies";
+                        for(int i =0;i<musics.size();i++){
+                            resource = resource + musics.get(i);
+                        }
+                        resource = resource +"music";
+                        for(int i =0;i<packages.size();i++){
+                            resource = resource + packages.get(i);
+                        }
+                        resource = resource +"package";
+                        for(int i =0;i<words.size();i++){
+                            resource = resource + words.get(i);
+                        }
+                        resource = resource +"word";
+                        Log.d("资源清单字符串",resource);
+                        //如果本设备不是组主，新建socket，将资源清单发给组主。
+                        // 如果本设备是组主，则启动ServerSocket，等待组员连接，而本机的资源，不需要socket发送
+                        //在进组过程中，组员要发资源清单给组主，所以组员调用客户写线程，组主调用服务读线程。在不同的环境下调用不同的读写方法。
+                        if(!isGO){
+                            Log.d("组员","我是组员组员组员");
+                            new ClientSocket("192.168.49.1",30000,"write",resource).start();
+                        }else{
+                            Log.d("组主","我是组主组主组主");
+                            new MyServerSocket(mWifiP2pDevice.deviceAddress,30000,"read").start();
+                        }
+                    }
+                });
+        }
+        else if(myStatus.equals("Available")){
             mContentView.findViewById(R.id.interGroup).setVisibility(View.GONE);
         }
 
@@ -254,11 +343,21 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
 //            return;
 //        }
     }
+    @Override
+    public void onConnectionInfoAvailable(WifiP2pInfo wifiP2pInfo){
+        mWifiP2pInfo = wifiP2pInfo;
+        isGO = mWifiP2pInfo.isGroupOwner;
+        Log.d("本设备是不是组主------","mWifiP2pInfo.isGroupOwner"+"="+String.valueOf(isGO));
+    }
+
+    public void onGroupInfoAvailable(WifiP2pGroup group){
+        mWifiP2pGroup = group;
+    }
     public interface DeviceActionListener{
       void connect(WifiP2pConfig wifiP2pConfig,WifiP2pDevice wifiP2pDevice);
       void disconnect();
       void publishService(String string);
-      void createGroup();
+      void createGroup(WifiP2pDevice wifiP2pDevice);
       void removeLocalService();
       void requestGroupInfo();
     }
