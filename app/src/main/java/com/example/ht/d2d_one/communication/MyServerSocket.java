@@ -1,6 +1,8 @@
 package com.example.ht.d2d_one.communication;
 
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 
 import java.io.IOException;
@@ -15,6 +17,8 @@ public class MyServerSocket extends Thread{
     private int port;
     private List<Socket> socketList = new ArrayList<Socket>();
     private String MAC = null;
+    private Socket s;
+    private static List<String> source;
 
     public List<Socket> getSocketList() {
         return socketList;
@@ -52,11 +56,34 @@ public class MyServerSocket extends Thread{
         serverSocket = new ServerSocket(port);
             while(true){
                 Log.d("MyServer","MyServer is listening...");
-                Socket s = serverSocket.accept();
+                s = serverSocket.accept();
                 socketList.add(s);
-                //accept之后转入到一个自线程socket中，负责与客户端socket之间到读写交互
-                new Thread(new MyServerSocketThread(MAC,s,label)).start();
+                //accept之后转入到一个子线程socket中，负责与客户端socket之间到读写交互
+                new Thread(new MyServerSocketThread(MAC,s,label,socketList.size())).start();
+//                if(source.size() == socketList.size()){
+//                    //将资源信息发给主线程
+//                }
+                //这个子线程什么时候关？从逻辑上来讲应该是在组主离开本组的时候。
             }
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+    }
+//    public static Handler handlerMyServerSocket = new Handler(){
+//        @Override
+//        public void handleMessage(Message message){
+//            if(message.what ==2){
+//                source.add((String)message.obj);
+//            }
+//        }
+//    };
+
+    public void close(){
+        try{
+            if(s!=null){
+                s.close();
+            }
+            serverSocket.close();
         }catch(IOException e){
             e.printStackTrace();
         }

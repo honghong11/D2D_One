@@ -236,7 +236,7 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
 
             @Override
             public void onFailure(int reason) {
-                Log.d(MainActivity.TRG,"Failed rrrrrrrrrrrremovelocalServiceeeeeeeeeeeeeeeeeee"+reason);
+                Log.d(MainActivity.TRG,"Failed  "+reason);
             }
         });
     }
@@ -262,7 +262,7 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
         });
     }
     @Override
-    public void createGroup(WifiP2pDevice wifiP2pDevice) {
+    public void createGroup(final WifiP2pDevice wifiP2pDevice) {
         manager.createGroup(channel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
@@ -278,23 +278,25 @@ public class MainActivity extends AppCompatActivity implements DeviceListFragmen
         Log.d("建组成功啦！！！！！！该设备名为：：：",wifiP2pDevice.deviceName);
     }
     @Override
-    public void requestGroupInfo(){
+    public void requestGroupInfo(final WifiP2pDevice wifiP2pDevice){
         manager.requestGroupInfo(channel, new WifiP2pManager.GroupInfoListener() {
             @Override
             public void onGroupInfoAvailable(WifiP2pGroup group) {
-                ArrayList<WifiP2pDevice> list = new ArrayList<WifiP2pDevice>();
-                Collection<WifiP2pDevice> deviceList = group.getClientList();
-                Log.d("组内成员个数--：：：：",String.valueOf(deviceList.size()));
-                list.addAll(group.getClientList());
-                Log.d("组内成员个数：：：：",String.valueOf(group.getClientList().size()));
-                Log.d("组内成员列表信息：：：：",group.getClientList().toString());
-                Log.d("组情况信息：：：：",group.toString());
-
-                Intent intent = new Intent(MainActivity.this,Main2Activity.class);
-                Bundle bundle = new Bundle();
-                bundle.putParcelableArrayList("clientList",list);
-                intent.putExtras(bundle);
-                startActivity(intent);
+                if(group!=null){
+//                    if(wifiP2pDevice.deviceAddress == group.getOwner().deviceAddress){
+//                        Log.d("这就是组主好吧","这就是组主");
+//                    }
+                    ArrayList<WifiP2pDevice> list = new ArrayList<WifiP2pDevice>();
+                    Collection<WifiP2pDevice> deviceList = group.getClientList();
+                    Log.d("组内成员个数--：：：：",String.valueOf(deviceList.size()));
+                    list.addAll(group.getClientList());
+                    Log.d("组内成员个数：：：：",String.valueOf(group.getClientList().size()));
+                    Log.d("组内成员列表信息：：：：",group.getClientList().toString());
+                    Log.d("组情况信息：：：：",group.toString());
+                    Log.d("组主信息",group.getOwner().toString());
+                }else{
+                    Log.d("该组为空","空空如也好吧");
+                }
             }
         });
     }

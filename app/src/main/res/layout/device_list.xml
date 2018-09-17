@@ -86,12 +86,20 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
         android:text="组列表："/>
+    <TextView
+        android:id="@+id/resouce"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:text="资源信息："
+        android:visibility="gone"/>
     <View
         android:layout_width="fill_parent"
         android:layout_height="1dp"
         android:layout_gravity="center_vertical"
         android:background="@android:color/holo_blue_light"/>
     <TextView
+        android:id="@+id/groupOwnerList"
         android:layout_width="180dp"
         android:layout_height="20dp"
         android:text="组主信息             组标签         "/>
@@ -110,6 +118,11 @@
 </LinearLayout> -->
 
     <!-- available peers-->
+    <TextView
+        android:id="@+id/nameOfResource"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"/>
     <ListView
         android:id="@id/android:list"
         android:layout_height="match_parent"
@@ -122,5 +135,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center"
-        android:text="no group found." />
+        />
+
 </LinearLayout>

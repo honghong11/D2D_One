@@ -52,6 +52,7 @@ public class ClientSocket extends Thread {
                 //首先获取资源，字符串类型,然后调用write方法
                 write(content);
                 socket.close();
+                Log.d("客户端写完毕","客户端写完了");
             }
         }catch (IOException e){
             e.printStackTrace();

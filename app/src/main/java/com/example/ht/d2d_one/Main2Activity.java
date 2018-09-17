@@ -33,7 +33,6 @@ public class Main2Activity extends ListActivity {
         });
         Intent intent = getIntent();
         Bundle bundle = intent.getExtras();
-        bundle.putParcelableArrayList("clientList",groupClient);
         Log.d("clientList:::::::::::",groupClient.toString());
         this.setListAdapter(new WifiClientListAdapter(this,R.layout.clents_list,groupClient));
     }

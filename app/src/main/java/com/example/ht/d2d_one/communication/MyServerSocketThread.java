@@ -1,6 +1,9 @@
 package com.example.ht.d2d_one.communication;
 
+import android.os.Message;
 import android.util.Log;
+
+import com.example.ht.d2d_one.DeviceListFragment;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -11,6 +14,8 @@ import java.net.Socket;
 
 public class MyServerSocketThread implements Runnable{
     MyServerSocket myServerSocket = new MyServerSocket();
+    private int MRESOURCE = 2;
+    private int num = 0;
     public Socket getSocket() {
         return socket;
     }
@@ -49,19 +54,28 @@ public class MyServerSocketThread implements Runnable{
         this.MAC = MAC;
     }
 
-    public MyServerSocketThread(String MAC, Socket socket, String label){
+    public MyServerSocketThread(String MAC, Socket socket, String label,int num){
         this.socket = socket;
         this.MAC = MAC;
         this.label = label;
+        this.num = num;
     }
     @Override
     public void run() {
-        Log.d("MyServerSocket","MyServerSocket开启成功");
+        Log.d("MyServerSocket","MyServerSocket开启成功"+num);
         try{
             if(label.equals("read")){
                 String getResource = read(socket);
-                Log.d("资源清单:::::::","设备Mac地址"+MAC+"-----"+getResource);
-                //如何将getResource 从该子线程发送到主线程中。
+                Log.d("资源清单:::::::",getResource);
+                //将资源从该子线程发送到主线程中，跨越一层线程
+                Message message = Message.obtain();
+                message.what = MRESOURCE;
+                message.obj = getResource;
+                if(message.obj!=null){
+                    Log.d("寻找资源的子线程中message的信息：",message.obj.toString());
+                }
+                //MyServerSocket.handlerMyServerSocket.sendMessage(message);
+                DeviceListFragment.messageHandler.sendMessage(message);
                 socket.close();
             }else if(label.equals("write")){
                 //首先获取资源，字符串类型,然后调用write方法
