@@ -11,8 +11,42 @@
        android:id = "@+id/quitCluster"
        android:layout_height="wrap_content"
        android:text="返回主页面"/>
+   <TextView
+     android:text="查找资源："
+     android:layout_height="wrap_content"
+     android:layout_width="wrap_content"
+     android:textSize="30sp"/>
+   <LinearLayout
+       android:layout_width="match_parent"
+       android:layout_height="wrap_content"
+       android:orientation="horizontal">
+       <EditText
+           android:text="@string/input"
+           android:layout_height="wrap_content"
+           android:layout_width="220dp"
+           android:id="@+id/resourceNameQurried"/>
+       <Spinner
+           android:id= "@+id/typeOfSource"
+           android:layout_marginLeft="15dp"
+           android:layout_width="wrap_content"
+           android:layout_height="wrap_content"
+           android:entries="@array/sourceType"/>
+   </LinearLayout>
 
- <LinearLayout
+   <Button
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:layout_gravity="right"
+       android:id="@+id/findSource"
+       android:text="@string/findSource"/>
+   <Button
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:layout_gravity="right"
+       android:id="@+id/showResult"
+       android:text="@string/showResult"/>
+
+ <!--<LinearLayout
      android:layout_width="match_parent"
      android:layout_height="200dp"
      android:orientation = "vertical">
@@ -50,25 +84,27 @@
       android:layout_height="match_parent"
       android:layout_gravity="center"
       android:text="no other devices." />
- </LinearLayout>
+ </LinearLayout>-->
  <LinearLayout
      android:layout_width="match_parent"
-     android:layout_height="200dp"
+     android:layout_height="wrap_content"
      android:orientation="vertical">
-  <View
-      android:layout_width="fill_parent"
-      android:layout_height="1dp"
-      android:layout_gravity="center_vertical"
-      android:background="@android:color/holo_blue_light" />
 
-  <TextView
-      android:layout_width="wrap_content"
-      android:layout_height="25dp"
-      android:layout_marginTop="2dp"
-      android:text="资源名称信息" />
-  <TextView
-      android:layout_height="wrap_content"
-      android:layout_width="match_parent"
-      android:id="@+id/content"/>
+      <TextView
+          android:id="@+id/resultList"
+          android:layout_width="wrap_content"
+          android:layout_height="20dp"
+          android:layout_gravity="center_vertical"
+          android:layout_marginTop="2dp"
+          android:text="结果信息：" />
+      <View
+          android:layout_width="fill_parent"
+          android:layout_height="1dp"
+          android:layout_gravity="center_vertical"
+          android:background="@android:color/holo_blue_light" />
+      <ListView
+         android:id="@+id/list_Main2Activity"
+         android:layout_height="match_parent"
+         android:layout_width="match_parent" />
  </LinearLayout>
 </LinearLayout>

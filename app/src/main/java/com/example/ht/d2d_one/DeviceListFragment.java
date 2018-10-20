@@ -40,8 +40,10 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class DeviceListFragment extends ListFragment implements WifiP2pManager.PeerListListener,
         WifiP2pManager.ConnectionInfoListener,WifiP2pManager.GroupInfoListener{
@@ -52,9 +54,12 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
     private final static int IS_RESOURCE = 1 ;
     private String allSourceFromClient = null;
     private  WifiP2pDevice mWifiP2pDevice;
-    private  WifiP2pInfo mWifiP2pInfo;
     private WifiP2pGroup mWifiP2pGroup;
+    private  WifiP2pInfo mWifiP2pInfo;
+    public String allSourceOfThisGroup;
     private int countOfFindResouce = 0;
+    private int groupSize =0;
+    private List<String> clientMacList = new ArrayList<>();
     MyServerSocket myServerSocket;
     public WifiP2pDevice getmWifiP2pDevice() {
         return mWifiP2pDevice;
@@ -99,14 +104,25 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
         wifiServiceAdapter = new WifiServiceAdapter(getActivity(),R.layout.row_device,ePeers);
         this.setListAdapter(wifiServiceAdapter);
         //this.setListAdapter(new WifiServiceAdapter(getActivity(),R.layout.row_device,ePeers));
+
+        Map<String,String> map = new HashMap<>();
+        map = messageHandler.getQurryMovieMap();
     }
     public View onCreateView(LayoutInflater inflater, ViewGroup container,Bundle savedInstanceState){
         mContentView = inflater.inflate(R.layout.device_list,null);
         mContentView.findViewById(R.id.disconnect).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                //组员在断开连接后，对组员进行管理
+                if(!isGO){
+                    firstInterGroup = true;
+                    countOfFindResouce = 0;
+                }
+                //调用disconnect()
                 ((DeviceActionListener)getActivity()).disconnect();
+                //更新service adapter
                 wifiServiceAdapter.clear();
+                //如果是组主关闭连接，关闭服务器socket
                 if(isGO){
                     //关闭服务socket
                     if(myServerSocket!=null){
@@ -137,8 +153,6 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                         ((MainActivity)getActivity()).publishService(label);
                         Log.d(MainActivity.TRG,"调用publishService函数成功啦啦啦啦啦啦啦啦啦"+label);
 
-
-
                         Log.d("组主????????????????",String.valueOf(mWifiP2pDevice.isGroupOwner()));
                         //new MyServerSocket(mWifiP2pDevice.deviceAddress,30000,"read").start();
                         myServerSocket = new MyServerSocket(mWifiP2pDevice.deviceAddress,30000,"read");
@@ -157,23 +171,116 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
     }
 
     public static class MessageHandler extends Handler{
-        private List<String> sourceList = new ArrayList<>();
-        private String sourceFromClient = null;
-        private String mSource = "1";
+        //messageList用于页面显示用
+        public Map<String,String> resultResourceMap = new HashMap<>();
+        private String messageFromClient = null;
+        private String mSource = "电影-音乐-安装包-文字";
+        //macOfAll用来存放所有设备的mac地址信息，目前没有用处
+        private List<String> macOfAll = new ArrayList<>();
+        private String[] splitMessage;
+        private String macToDevice = null;
+        private String sourceOfDevice = null;
+        //这四个list用来存储组员发来的资源名称信息
+        private Map<String,String> movieMap = new HashMap<>();
+        private Map<String,String> musicMap = new HashMap<>();
+        private Map<String,String> packageMap = new HashMap<>();
+        private Map<String,String> wordMap = new HashMap<>();
+        //这四个map用来存储组内的资源信息方便进行匹配以及结果的返回
+        private Map<String,String> qurryMovieMap = new HashMap<>();
+
+        public Map<String, String> getQurryMusicMap() {
+            return qurryMusicMap;
+        }
+
+        public Map<String, String> getQurryPackageMap() {
+            return qurryPackageMap;
+        }
+
+        public Map<String, String> getQurryWordMap() {
+            return qurryWordMap;
+        }
+
+        public Map<String, String> getQurryMovieMap() {
+            Log.d("movieMap中的内容信息",qurryMovieMap.toString());
+            return qurryMovieMap;
+        }
+        private Map<String,String> qurryMusicMap = new HashMap<>();
+        private Map<String,String> qurryPackageMap = new HashMap<>();
+        private Map<String,String> qurryWordMap = new HashMap<>();
+        private String[] splitSource ;
         @Override
         public void handleMessage(Message message){
             if(message.what ==IS_RESOURCE){
                 mSource = (String)message.obj;
                 Log.d("子线程发来的message",mSource);
             }else if(message.what == 2){
-                sourceFromClient = (String)message.obj;
-                if(sourceFromClient!=null){
-                    sourceList.add(sourceFromClient);
-                }
-                if(sourceFromClient!=null){
-                    Log.d("组员发来的资源信息为：",sourceFromClient);
+                messageFromClient = (String)message.obj;
+                if(messageFromClient!=null){
+                    splitMessage = messageFromClient.split("\\*");
+                    Log.d("消息分裂为及部分：",String.valueOf(splitMessage.length));
+                    macToDevice = splitMessage[0];
+                    macOfAll.add(macToDevice);
+                    sourceOfDevice = splitMessage[1];
+                    Log.d("设备的mac地址：",macToDevice);
+                    //资源名称信息数据结构
+                    splitSource = sourceOfDevice.split("-");
+                    if(splitSource[0]!=null){
+                        movieMap.put(macToDevice,splitSource[0]);
+                        qurryMovieMap = dataProcessing(movieMap);
+                    }else{
+                        movieMap.put(null,null);
+                    }
+                    if(splitSource[1]!=null){
+                        musicMap.put(macToDevice,splitSource[1]);
+                        qurryMusicMap = dataProcessing(musicMap);
+                    }else{
+                        musicMap.put(null,null);
+                    }
+                    if(splitSource[2]!=null){
+                        packageMap.put(macToDevice,splitSource[2]);
+                        qurryPackageMap = dataProcessing(packageMap);
+                    }else{
+                        packageMap.put(null,null);
+                    }
+                    if(splitSource[3]!=null){
+                        wordMap.put(macToDevice,splitSource[3]);
+                        qurryWordMap = dataProcessing(wordMap);
+                    }else{
+                        wordMap.put(null,null);
+                    }
+                    Log.d("电影列表中的信息：",movieMap.toString());
                 }
             }
+        }
+
+        /**
+         *
+         * @param resourceMap mac path+name|path+name...,mac path+name|path+name... 样式
+         * @return mac+path name， mac+path name ...样式
+         */
+        public Map<String,String> dataProcessing(Map<String,String> resourceMap){
+            //keySet.size 和mac地址的数目相等
+            Set<String> keySet =  resourceMap.keySet();
+            String [] resource = new String[keySet.size()];
+            String [] macSet = new String[keySet.size()];
+            int i=0;
+            for(String key:keySet){
+                macSet[i] = key;
+                resource[i] = resourceMap.get(key);
+                String[] singleResource = resource[i].split("\\|");
+                String [] macPlusPathSource = new String[singleResource.length-1];
+                String [] nameSource = new String[singleResource.length-1];
+                int j =0;
+                //singleResource.length表示一个mac地址所对应的资源数目
+                for(;j<singleResource.length-1;j++){
+                    String temp[] = singleResource[j].split("\\+");
+                    macPlusPathSource[j] = macSet[i]+"+"+temp[0];
+                    nameSource[j] = temp[1];
+                    resultResourceMap.put(macPlusPathSource[j],nameSource[j]);
+                }
+                i++;
+            }
+            return resultResourceMap;
         }
     }
 
@@ -307,18 +414,22 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                 mContentView.findViewById(R.id.interGroup).setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        //页面跳转
+                        //页面跳转，进入第二个页面
                         Intent intent = new Intent(getActivity(),Main2Activity.class);
+                        intent.putExtra("deviceAddress",mWifiP2pDevice.deviceAddress);
+                        intent.putExtra("isGO",isGO);
                         startActivity(intent);
                         Log.d("资源清单字符串",mWifiP2pDevice.deviceAddress+"+"+messageHandler.mSource);
+                        Log.d("firstInterGroup的值：",String.valueOf(firstInterGroup));
                         if(firstInterGroup){
+                            Log.d("isGroupOwner()的值",String.valueOf(mWifiP2pDevice.isGroupOwner()));
                             if(!mWifiP2pDevice.isGroupOwner()){
                                 Log.d("组员","我是组员组员组员");
-                                new ClientSocket("192.168.49.1",30000,"write",mWifiP2pDevice.deviceAddress+"+"+
+                                new ClientSocket("192.168.49.1",30000,"write",mWifiP2pDevice.deviceAddress+"*"+
                                         messageHandler.mSource).start();
                                 Log.d("写写写","已开启客户端写");
+                                firstInterGroup = false;
                             }
-                            firstInterGroup = false;
                         }
                     }
                 });
@@ -393,22 +504,47 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
     }
 
     public void onGroupInfoAvailable(WifiP2pGroup group){
+        String aimMac = null;
+        Log.d("组内成员数量",String.valueOf(group.getClientList().size()));
+        if(groupSize != group.getClientList().size()){
+            if(groupSize > group.getClientList().size()){
+                Collection<WifiP2pDevice> tempList = group.getClientList();
+                for(WifiP2pDevice d : tempList){
+                    for(int j = 0;j<clientMacList.size();j++){
+                        if(clientMacList.get(j)!=d.deviceAddress){
+                            aimMac = clientMacList.get(j);
+                            Log.d("离开本组的设备mac地址：",aimMac);
+                            //从messageHandler.allMacToDevice中删去aimMac,并删去四个list中对应的信息
+                            messageHandler.macOfAll.remove(aimMac);
+                            messageHandler.movieMap.remove(aimMac);
+                            messageHandler.musicMap.remove(aimMac);
+                            messageHandler.packageMap.remove(aimMac);
+                            messageHandler.wordMap.remove(aimMac);
+                            Log.d("当前时刻的电影资源信息",messageHandler.movieMap.toString());
+
+                        }
+                    }
+                }
+            }
+            groupSize = group.getClientList().size();
+            Collection<WifiP2pDevice> deviceList = group.getClientList();
+            for(WifiP2pDevice d : deviceList){
+                clientMacList.add(d.deviceAddress);
+            }
+        }
         mWifiP2pGroup = group;
-        Log.d("组主设备物理地址",group.getOwner().deviceAddress);
-        Log.d("本机设备物理地址",mWifiP2pDevice.deviceAddress);
-        //boolean t=mWifiP2pGroup.isGroupOwner();
-       // Log.d("本机位组主",String.valueOf(t));
         Log.d("本机位组主",String.valueOf(mWifiP2pGroup.isGroupOwner()));
         Log.d("组情况变化了","这里也可以展现变化的好吧");
         ArrayList<WifiP2pDevice> list = new ArrayList<WifiP2pDevice>();
-        Collection<WifiP2pDevice> deviceList = group.getClientList();
+
         list.addAll(group.getClientList());
         Log.d("组内成员列表信息：：：：",group.getClientList().toString());
-
-        Log.d("资源名称列表内容：：：：：",messageHandler.sourceList.toString());
         TextView textView = mContentView.findViewById(R.id.nameOfResource);
-        if(messageHandler.sourceList!=null){
-            textView.setText(messageHandler.sourceList.toString());
+        allSourceOfThisGroup = messageHandler.movieMap.toString()+messageHandler.musicMap.toString()+
+                messageHandler.packageMap.toString()+messageHandler.wordMap.toString();
+        Log.d("组内资源信息",allSourceOfThisGroup);
+        if(allSourceOfThisGroup!=null){
+            textView.setText(allSourceOfThisGroup);
         }
         if(group.getClientList().size()==0){
             textView.setText("无连接");

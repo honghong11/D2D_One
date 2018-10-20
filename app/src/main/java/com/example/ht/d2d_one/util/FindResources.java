@@ -3,6 +3,7 @@ package com.example.ht.d2d_one.util;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Message;
+import android.util.Log;
 
 import com.example.ht.d2d_one.DeviceListFragment;
 import com.example.ht.d2d_one.MainActivity;
@@ -25,6 +26,7 @@ public class FindResources{
         File[] files;
         files = dir.listFiles();
         if (files == null) {
+            source = "电影-音乐-安装包-文字";
             return;
         }
         for (File file : files) {
@@ -49,14 +51,16 @@ public class FindResources{
                 }
             }
         }
-        source = "movies"+ ":" + resourceMovies.toString() + "-" + "musics" + ":" + resourceMusics.toString() + "-"
-                + "packages" + ":" + resourcePackges.toString() + "-" + "word" + ":" + resourceWords.toString();
+        source = resourceMovies.toString() + "-" +resourceMusics.toString() + "-"
+                + resourcePackges.toString() + "-" + resourceWords.toString();
     }
     public String getResources(){
         String resources = " ";
         File dir = Environment.getExternalStorageDirectory();
+
         findResources(dir);
         resources = source;
+        Log.d("resource 是什么",resources);
         return resources;
     }
 }

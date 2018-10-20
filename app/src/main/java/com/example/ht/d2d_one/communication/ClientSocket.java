@@ -1,5 +1,6 @@
 package com.example.ht.d2d_one.communication;
 
+import android.os.Message;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -9,11 +10,14 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 
+import static com.example.ht.d2d_one.Main2Activity.main2ActivityMessagHandler;
+
 public class ClientSocket extends Thread {
     private  Socket socket;
     private String label;
     private String host = null;
     private String content =null;
+    final private int QURRYFROMGO =3;
     private int port;
 
     public String getContent() {
@@ -53,6 +57,19 @@ public class ClientSocket extends Thread {
                 write(content);
                 socket.close();
                 Log.d("客户端写完毕","客户端写完了");
+            }else if(label.equals("qurry")){
+                qurry(true,content);
+//                String resultFromGO = read(socket);
+//                Message message = Message.obtain();
+//                message.what = QURRYFROMGO;
+//                message.obj = resultFromGO;
+//                if(message.obj!=null){
+//                    Log.d("查询返回的结果为：",message.obj.toString());
+//                }
+//                //MyServerSocket.handlerMyServerSocket.sendMessage(message);
+//                main2ActivityMessagHandler.sendMessage(message);
+                socket.close();
+                Log.d("客户端发送查询完成","客户端发送查询完成");
             }
         }catch (IOException e){
             e.printStackTrace();
@@ -77,7 +94,19 @@ public class ClientSocket extends Thread {
             Log.d("客户端写","客户端写成功");
             bufferedWriter.close();
         }catch (IOException e){
-            System.out.print(e);
+            e.printStackTrace();
+        }
+    }
+    //qurry 和write 的区别在于qurry需要加一个标签，让组主服务端可以判别
+    public void qurry(boolean forQurry,String source){
+        try{
+            String qurrySource = String.valueOf(forQurry)+"-"+source;
+            BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            bufferedWriter.write(qurrySource);
+            Log.d("客户端查询","客户端查询成功");
+            bufferedWriter.close();
+        }catch (IOException e){
+            e.printStackTrace();
         }
     }
 }

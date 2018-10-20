@@ -3,4 +3,7 @@
     <string name="on_off">P2P_On/Off</string>
     <string name="discovery">P2P_Discovery</string>
     <string name="name">ME</string>
+    <string name="input">请输入资源名称包括格式</string>
+    <string name="findSource">点击查找</string>
+    <string name="showResult">点击查看查询结果</string>
 </resources>
