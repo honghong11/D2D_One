@@ -19,6 +19,7 @@ import java.util.Set;
 import static com.example.ht.d2d_one.DeviceListFragment.messageHandler;
 
 public class MyServerSocketThread implements Runnable{
+    public Map<String, String> GMF = new HashMap<>();
     MyServerSocket myServerSocket = new MyServerSocket();
     private int MRESOURCE = 2;
     private int num = 0;
@@ -72,10 +73,11 @@ public class MyServerSocketThread implements Runnable{
         try{
             String clientIpAddrss = socket.getInetAddress().toString();
             clientIpAddrss = clientIpAddrss.substring(1);
-            Log.d("此连接的组员设备分配的IP地址为：", ":/-"+clientIpAddrss);
+            Log.d("此连接的组员设备分配的IP地址为：", ":/-"+clientIpAddrss+label);
             if(label.equals("read")){
                 String getResource = read(socket);
                 String[]messageFromClient = getResource.split("-");
+                Log.d("第一部分的字符串：：",messageFromClient[0]);
                 //如果第一个部分为字符串true，则表明组主收到的为查询
                 if(messageFromClient[0].equals("true")){
                     Map<String,String> resultMap = new HashMap<>();
@@ -126,7 +128,23 @@ public class MyServerSocketThread implements Runnable{
                                 Log.d("出现错误","未找到匹配的资源类型");
                         }
                     }
-                }else{
+                }//若第一个部分为toBeGateway，表示组主收到的是组员成网关节点的信息，通过查看网关节点信息表，决定该节点与那个组主建立LC连接
+                //网关节点的信息表在本线程中建立GMF<MAC of GW,MAC of GO in LC, Tag of LC GO>
+                if(messageFromClient[0].equals("toBeGateway")){
+                    /**
+                     * 构建网关节点信息列表
+                     * 确定进行LC连接的组主信息
+                     */
+                    if(GMF.size()==0){
+                        //当前网关节点列表为空，直接将申请成为网关节点的设备成为网关节点，LC GO随机分配/或者根据组员携带来的邻近组主的信息比如信号强度
+                        if(messageFromClient[1]!=null){
+                            String stringFromPreGW = messageFromClient[1];
+                            //将该字符串切割，放到MAp中，调用一个小的推荐函数。具体的方法写到GateWay类中
+                            Log.d("附近组主的详细信息",stringFromPreGW);
+                        }
+                    }
+                }
+                else{
                     Log.d("资源清单:::::::",getResource);
                     //将资源从该子线程发送到主线程中，跨越一层线程
                     Message message = Message.obtain();

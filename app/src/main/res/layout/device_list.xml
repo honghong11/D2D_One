@@ -31,13 +31,21 @@
                 android:id="@+id/createGroup"
                 android:layout_width="200dp"
                 android:layout_height="40dp"
-                android:text="createGroup" />
+                android:text="createGroup"
+                android:visibility="visible"/>
             <Button
                 android:layout_gravity="center"
                 android:id="@+id/interGroup"
                 android:layout_width="200dp"
                 android:layout_height="40dp"
                 android:text="interGroup"
+                android:visibility="gone"/>
+            <Button
+                android:layout_width="200dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:id="@+id/toBeGateway"
+                android:text="toBeGateway"
                 android:visibility="gone"/>
         </LinearLayout>
     </LinearLayout>

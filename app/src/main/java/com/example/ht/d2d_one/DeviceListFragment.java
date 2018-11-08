@@ -60,6 +60,7 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
     private int countOfFindResouce = 0;
     private int groupSize =0;
     private List<String> clientMacList = new ArrayList<>();
+    public List<WifiP2pDevice> peers = new ArrayList<>();
     MyServerSocket myServerSocket;
     public WifiP2pDevice getmWifiP2pDevice() {
         return mWifiP2pDevice;
@@ -90,7 +91,7 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
     ProgressDialog progressDialog = null;
     Boolean isGroupMemberNull = true;
     Boolean isGO = true;
-    private List<WifiDeviceWithLabel> ePeers = new ArrayList<WifiDeviceWithLabel>();
+    public List<WifiDeviceWithLabel> ePeers = new ArrayList<WifiDeviceWithLabel>();
     private List<WifiDeviceWithLabel> test = new ArrayList<WifiDeviceWithLabel>();
     private List<WifiP2pDevice> deviceList = new ArrayList<WifiP2pDevice>();
     private String string = "/";
@@ -405,37 +406,60 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
         List<WifiP2pDevice> groupClientList = new ArrayList<>();
         if(myStatus.equals("Connected")){
             mContentView.findViewById(R.id.interGroup).setVisibility(View.VISIBLE);
+            mContentView.findViewById(R.id.createGroup).setVisibility(View.GONE);
+            mContentView.findViewById(R.id.toBeGateway).setVisibility(View.VISIBLE);
             //标志位countOfFindResource标志该机是否已经运行过寻找本机资源子线程，如果已运行则不再执行
             if(countOfFindResouce<1){
                 new Thread (new FindResourceThread()).start();
                 countOfFindResouce++;
             }
             Log.d("资源清单字符串",messageHandler.mSource);
-                mContentView.findViewById(R.id.interGroup).setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        //页面跳转，进入第二个页面
-                        Intent intent = new Intent(getActivity(),Main2Activity.class);
-                        intent.putExtra("deviceAddress",mWifiP2pDevice.deviceAddress);
-                        intent.putExtra("isGO",isGO);
-                        startActivity(intent);
-                        Log.d("资源清单字符串",mWifiP2pDevice.deviceAddress+"+"+messageHandler.mSource);
-                        Log.d("firstInterGroup的值：",String.valueOf(firstInterGroup));
-                        if(firstInterGroup){
-                            Log.d("isGroupOwner()的值",String.valueOf(mWifiP2pDevice.isGroupOwner()));
-                            if(!mWifiP2pDevice.isGroupOwner()){
-                                Log.d("组员","我是组员组员组员");
-                                new ClientSocket("192.168.49.1",30000,"write",mWifiP2pDevice.deviceAddress+"*"+
-                                        messageHandler.mSource).start();
-                                Log.d("写写写","已开启客户端写");
-                                firstInterGroup = false;
-                            }
+            mContentView.findViewById(R.id.interGroup).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    //页面跳转，进入第二个页面
+                    Intent intent = new Intent(getActivity(),Main2Activity.class);
+                    intent.putExtra("deviceAddress",mWifiP2pDevice.deviceAddress);
+                    intent.putExtra("isGO",isGO);
+                    startActivity(intent);
+                    Log.d("资源清单字符串",mWifiP2pDevice.deviceAddress+"+"+messageHandler.mSource);
+                    Log.d("firstInterGroup的值：",String.valueOf(firstInterGroup));
+                    if(firstInterGroup){
+                        Log.d("isGroupOwner()的值",String.valueOf(mWifiP2pDevice.isGroupOwner()));
+                        if(!mWifiP2pDevice.isGroupOwner()){
+                            Log.d("组员","我是组员组员组员");
+                            new ClientSocket("192.168.49.1",30000,"write",mWifiP2pDevice.deviceAddress+"*"+
+                                    messageHandler.mSource).start();
+                            Log.d("写写写","已开启客户端写");
+                            firstInterGroup = false;
                         }
                     }
-                });
+                }
+            });
+            /**
+             * toBeGateway 按钮中的事件包括两个：
+             * 与组主进行信息交互，将自身周围的组主信息发送给当前组主；组主将判断后的信息发送给组员
+             * 通过wifiIntentManger.java进行LC连接
+             */
+            mContentView.findViewById(R.id.toBeGateway).setOnClickListener(new View.OnClickListener(){
+                String temp = "";
+                @Override
+                public void onClick(View v){
+                    List<String> nearbyGO = new ArrayList<>();
+                    for(int i =0;i<ePeers.size();i++){
+                        temp = ePeers.get(i).getDevice().deviceAddress+"/"+ePeers.get(i).getDevice().deviceName+"/"+ePeers.get(i).getLabel();
+                        nearbyGO.add(temp);
+                    }
+                    temp = nearbyGO.toString();
+                    Log.d("附近组主信息----",temp);
+                    new ClientSocket("192.168.49.1",30000,"write","toBeGateway"+"-"+temp).start();
+                }
+            });
         }
         else if(myStatus.equals("Available")){
             mContentView.findViewById(R.id.interGroup).setVisibility(View.GONE);
+            mContentView.findViewById(R.id.createGroup).setVisibility(View.VISIBLE);
+            mContentView.findViewById(R.id.toBeGateway).setVisibility(View.GONE);
         }
     }
     public class FindResourceThread implements Runnable{
@@ -471,28 +495,23 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
 //
 //    }
 
-    //方案二：判断获取的设备是否为组主，过滤出来。
+    /**
+     * 用peers去记录当前设备附近的组主信息，用于向当前组主发送邻近组主信息
+     */
     @Override
    public void onPeersAvailable(WifiP2pDeviceList peerList){
-//        if(processDialog!=null&&processDialog.isShowing()){
-//            processDialog.dismiss();
-//        }
-//        peers.clear();
-//        peers.addAll(peerList.getDeviceList());
-//        Log.d(MainActivity.TRG,"调用次数"+i++);
-//        Log.d(MainActivity.TRG,"周围设备信息："+peers);
-//        //过滤组主
-//        //        for(int i =0;i<peers.size();i++){
-//        //            if(!peers.get(i).isGroupOwner()){
-//        //                peers.remove(i);
-//        //            }
-//        //        }
-//        //重新加载页面notifyDataSetChanged(),这是arrayAdapter中的方法
-//      ((WifiPeerListAdapter)getListAdapter()).notifyDataSetChanged();
-//        if(peers.size()==0){
-//            Log.d(MainActivity.TRG,"No device found");
-//            return;
-//        }
+        if(processDialog!=null&&processDialog.isShowing()){
+            processDialog.dismiss();
+        }
+        peers.clear();
+        peers.addAll(peerList.getDeviceList());
+        Log.d(MainActivity.TRG,"调用次数"+i++);
+        Log.d(MainActivity.TRG,"周围设备信息："+peers);
+        for(int i =0;i<peers.size();i++){
+            if(!peers.get(i).isGroupOwner()){
+                peers.remove(i);
+            }
+        }
     }
     @Override
     public void onConnectionInfoAvailable(WifiP2pInfo wifiP2pInfo){
