@@ -1,18 +1,11 @@
 package com.example.ht.d2d_one.util;
 
-import android.os.Bundle;
 import android.os.Environment;
-import android.os.Message;
 import android.util.Log;
-
-import com.example.ht.d2d_one.DeviceListFragment;
-import com.example.ht.d2d_one.MainActivity;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class FindResources{
     private List<String> resourceMovies = new ArrayList<>();
@@ -57,7 +50,6 @@ public class FindResources{
     public String getResources(){
         String resources = " ";
         File dir = Environment.getExternalStorageDirectory();
-
         findResources(dir);
         resources = source;
         Log.d("resource 是什么",resources);

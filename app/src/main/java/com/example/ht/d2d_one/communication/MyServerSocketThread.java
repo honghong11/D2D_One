@@ -1,10 +1,9 @@
 package com.example.ht.d2d_one.communication;
 
+import android.app.Activity;
 import android.os.Message;
 import android.util.Log;
-
-import com.example.ht.d2d_one.DeviceListFragment;
-import com.example.ht.d2d_one.util.MatchingAlgorithm;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -16,7 +15,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static com.example.ht.d2d_one.DeviceListFragment.messageHandler;
+import com.example.ht.d2d_one.bisicWifiDirect.MainActivity;
+import com.example.ht.d2d_one.icn.IcnOfGO;
+import com.example.ht.d2d_one.icn.MatchingAlgorithm;
+import com.example.ht.d2d_one.interGroupCommunication.GateWay;
+import com.example.ht.d2d_one.intraGroupCommunication.IntraCommunication;
+
+import static com.example.ht.d2d_one.bisicWifiDirect.BasicWifiDirectBehavior.messageHandler;
 
 public class MyServerSocketThread implements Runnable{
     public Map<String, String> GMF = new HashMap<>();
@@ -26,20 +31,18 @@ public class MyServerSocketThread implements Runnable{
     public Socket getSocket() {
         return socket;
     }
-
     public void setSocket(Socket socket) {
         this.socket = socket;
     }
     private Socket socket = null;
-
+    public GateWay gateWay = new GateWay(false);
+    public IcnOfGO icnOfGO = new IcnOfGO();
     public String getLabel() {
         return label;
     }
-
     public void setLabel(String label) {
         this.label = label;
     }
-
     private String MAC = null;
     private String label = null;
     //这个content可以从主线程中传下来
@@ -61,7 +64,8 @@ public class MyServerSocketThread implements Runnable{
         this.MAC = MAC;
     }
 
-    public MyServerSocketThread(String MAC, Socket socket, String label,int num){
+    public MyServerSocketThread(IcnOfGO icnOfGO,String MAC, Socket socket, String label,int num){
+        this.icnOfGO = icnOfGO;
         this.socket = socket;
         this.MAC = MAC;
         this.label = label;
@@ -106,43 +110,75 @@ public class MyServerSocketThread implements Runnable{
                             case "music":
                                 matchingAlgorithm = new MatchingAlgorithm(qurryName,messageHandler.getQurryMusicMap());
                                 resultMap = matchingAlgorithm.matchingCharacterAlgorithm(qurryName,messageHandler.getQurryMusicMap());
-                                dataToBack = mapToString(resultMap);
-                                write(dataToBack);
+                                if(resultMap!=null){
+                                    dataToBack = mapToString(resultMap);
+                                    if(dataToBack!=null){
+                                        Log.d("组主节点处的结果信息",dataToBack);
+                                        ClientSocket clientSocketGO  = new ClientSocket(clientIpAddrss,30001,"write",dataToBack);
+                                        clientSocketGO.start();
+                                    }
+                                }else{
+                                    dataToBack = "没有查询到信息";
+                                }
                                 socket.close();
                                 break;
                             case "packet":
                                 matchingAlgorithm = new MatchingAlgorithm(qurryName,messageHandler.getQurryPackageMap());
                                 resultMap = matchingAlgorithm.matchingCharacterAlgorithm(qurryName,messageHandler.getQurryPackageMap());
-                                dataToBack = mapToString(resultMap);
-                                write(dataToBack);
+                                if(resultMap!=null){
+                                    dataToBack = mapToString(resultMap);
+                                    if(dataToBack!=null){
+                                        Log.d("组主节点处的结果信息",dataToBack);
+                                        ClientSocket clientSocketGO  = new ClientSocket(clientIpAddrss,30001,"write",dataToBack);
+                                        clientSocketGO.start();
+                                    }
+                                }else{
+                                    dataToBack = "没有查询到信息";
+                                }
                                 socket.close();
                                 break;
                             case "word":
                                 matchingAlgorithm = new MatchingAlgorithm(qurryName,messageHandler.getQurryWordMap());
                                 resultMap = matchingAlgorithm.matchingCharacterAlgorithm(qurryName,messageHandler.getQurryWordMap());
-                                dataToBack = mapToString(resultMap);
-                                write(dataToBack);
+                                if(resultMap!=null){
+                                    dataToBack = mapToString(resultMap);
+                                    if(dataToBack!=null){
+                                        Log.d("组主节点处的结果信息",dataToBack);
+                                        ClientSocket clientSocketGO  = new ClientSocket(clientIpAddrss,30001,"write",dataToBack);
+                                        clientSocketGO.start();
+                                    }
+                                }else{
+                                    dataToBack = "没有查询到信息";
+                                }
                                 socket.close();
                                 break;
                             default:
                                 Log.d("出现错误","未找到匹配的资源类型");
                         }
                     }
-                }//若第一个部分为toBeGateway，表示组主收到的是组员成网关节点的信息，通过查看网关节点信息表，决定该节点与那个组主建立LC连接
-                //网关节点的信息表在本线程中建立GMF<MAC of GW,MAC of GO in LC, Tag of LC GO>
+                }
+                /**
+                 * 若第一个部分为toBeGateway，表示组主收到的是组员成网关节点的信息，通过查看网关节点信息表，决定该节点与那个组主建立LC连接
+                 * 网关节点列表存放在IcnOfGO的GM中
+                 */
+
                 if(messageFromClient[0].equals("toBeGateway")){
-                    /**
-                     * 构建网关节点信息列表
-                     * 确定进行LC连接的组主信息
-                     */
-                    if(GMF.size()==0){
-                        //当前网关节点列表为空，直接将申请成为网关节点的设备成为网关节点，LC GO随机分配/或者根据组员携带来的邻近组主的信息比如信号强度
+                    // GMF 本组的网关节点信息
+                    GMF = icnOfGO.getGM();
+                        //当前网关节点列表为空，直接将申请成为网关节点的设备成为网关节点，LC GO随机分配/
+                        // 或者根据组员携带来的邻近组主的信息比如信号强度
+                    String aimLCGo;
                         if(messageFromClient[1]!=null){
                             String stringFromPreGW = messageFromClient[1];
                             //将该字符串切割，放到MAp中，调用一个小的推荐函数。具体的方法写到GateWay类中
                             Log.d("附近组主的详细信息",stringFromPreGW);
+                            aimLCGo = gateWay.chooseWifiGO(GMF,stringFromPreGW);
+                            /**
+                             * 再开启一个客户端子线程，将aimLCGo发送给该准网关节点
+                             */
+                            new ClientSocket(clientIpAddrss,30002,"write",aimLCGo).start();
+                            socket.close();
                         }
-                    }
                 }
                 else{
                     Log.d("资源清单:::::::",getResource);
@@ -166,10 +202,17 @@ public class MyServerSocketThread implements Runnable{
             e.printStackTrace();
         }
     }
+
+    /**
+     * 这个方法是将资源存放到内存中，不能永久保存，在数据传输中，需要存储到文件或者SD卡中，还需要对应音视频，apk等文件格式
+     * @param socket
+     * @return
+     */
     public String read (Socket socket){
         String content = null;
         try{
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            BufferedReader bufferedReader = new BufferedReader(new
+                    InputStreamReader(socket.getInputStream()));
             content = bufferedReader.readLine();
             bufferedReader.close();
         }catch (IOException e){
@@ -181,7 +224,8 @@ public class MyServerSocketThread implements Runnable{
     }
     public void write(String resource){
         try{
-            BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            BufferedWriter bufferedWriter = new BufferedWriter(new
+                    OutputStreamWriter(socket.getOutputStream()));
             bufferedWriter.write(resource);
             bufferedWriter.close();
         }catch (IOException e){

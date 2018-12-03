@@ -1,6 +1,5 @@
 package com.example.ht.d2d_one.communication;
 
-import android.os.Message;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -9,8 +8,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
-
-import static com.example.ht.d2d_one.Main2Activity.main2ActivityMessagHandler;
 
 public class ClientSocket extends Thread {
     private  Socket socket;

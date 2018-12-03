@@ -1,14 +1,11 @@
-package com.example.ht.d2d_one;
+package com.example.ht.d2d_one.intraGroupCommunication;
 
 import android.app.Activity;
-import android.app.ListActivity;
 import android.content.Context;
 import android.content.Intent;
-import android.net.wifi.p2p.WifiP2pDevice;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,18 +18,14 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.ht.d2d_one.R;
 import com.example.ht.d2d_one.communication.ClientSocket;
 import com.example.ht.d2d_one.communication.MyServerSocket;
 
-import org.w3c.dom.Text;
-
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
-public class Main2Activity extends Activity {
+public class IntraCommunication extends Activity {
     //此处应该是资源查询结果，包括资源名称+对应的设备地址
     private ArrayList<String> sourceResultList = new ArrayList<>();
     private boolean isGO = false;
@@ -79,7 +72,7 @@ public class Main2Activity extends Activity {
                         Log.d("开启服务端的mac地址是：",deviceAddress);
                         MyServerSocket myServerSocketTwo = new MyServerSocket(deviceAddress,30001,"read", "client");
                         myServerSocketTwo.start();
-                        Toast.makeText(Main2Activity.this, "资源查询成功",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(IntraCommunication.this, "资源查询成功",Toast.LENGTH_SHORT).show();
                     }else{
                         //如果是组主，本地查询
                         isClickQurrySourceButton = true;
@@ -94,15 +87,15 @@ public class Main2Activity extends Activity {
             @Override
             public void onClick(View v){
                 if(isClickQurrySourceButton){
-                    if(main2ActivityMessagHandler.resultQurryFromGO!=null){
-                        sourceResultList = (ArrayList<String>) StringToList(main2ActivityMessagHandler.resultQurryFromGO);
+                    if(main2ActivityMessagHandler.resultQueryFromGO!=null){
+                        sourceResultList = (ArrayList<String>) StringToList(main2ActivityMessagHandler.resultQueryFromGO);
                         Log.d("点击查看查询结果为：：：：：", sourceResultList.toString());
                         ListView listView = (ListView) findViewById(R.id.list_Main2Activity);
-                        ResultSourceAdapter resultSourceAdapter = new ResultSourceAdapter(Main2Activity.this,R.layout.service_list,sourceResultList);
+                        ResultSourceAdapter resultSourceAdapter = new ResultSourceAdapter(IntraCommunication.this,R.layout.service_list,sourceResultList);
                         listView.setAdapter(resultSourceAdapter);
                     }else{
-                        Log.d("查询结果为空值","hh"+main2ActivityMessagHandler.resultQurryFromGO);
-                        Toast.makeText(Main2Activity.this,"查询结果为空值",Toast.LENGTH_SHORT).show();
+                        Log.d("查询结果为空值","hh"+main2ActivityMessagHandler.resultQueryFromGO);
+                        Toast.makeText(IntraCommunication.this,"查询结果为空值",Toast.LENGTH_SHORT).show();
                     }
                 }
             }
@@ -139,17 +132,16 @@ public class Main2Activity extends Activity {
         super.onDestroy();
     }
     public static class Main2ActivityMessagHandler extends Handler{
-        private String resultQurryFromGO;
-
+        private String resultQueryFromGO;
         public String getResultQurryFromGO() {
-            return resultQurryFromGO;
+            return resultQueryFromGO;
         }
 
         @Override
         public void handleMessage(Message msg) {
             if(msg.what==3){
-                resultQurryFromGO = (String)msg.obj;
-                Log.d("查询返回信息",resultQurryFromGO);
+                resultQueryFromGO = (String)msg.obj;
+                Log.d("查询返回信息",resultQueryFromGO);
             }
         }
     }

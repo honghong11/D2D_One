@@ -1,10 +1,6 @@
-package com.example.ht.d2d_one;
+package com.example.ht.d2d_one.util;
 
 import android.net.wifi.p2p.WifiP2pDevice;
-import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceRequest;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class WifiDeviceWithLabel {
     private WifiP2pDevice device;

@@ -1,4 +1,4 @@
-package com.example.ht.d2d_one.util;
+package com.example.ht.d2d_one.icn;
 
 import android.util.Log;
 
@@ -10,7 +10,7 @@ public class MatchingAlgorithm {
     private String qurryName = "qurryName";
     private Map<String,String> resourceMap = new HashMap<>();
     public Map<String,String> resultResourceMap = new HashMap<>();
-    public MatchingAlgorithm(String qurryName,Map<String,String>resourceMap){
+    public MatchingAlgorithm(String qurryName, Map<String,String>resourceMap){
         this.qurryName = qurryName;
         this.resourceMap = resourceMap;
     }

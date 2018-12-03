@@ -1,6 +1,5 @@
-package com.example.ht.d2d_one;
+package com.example.ht.d2d_one.bisicWifiDirect;
 
-import android.annotation.SuppressLint;
 import android.app.ListFragment;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -16,7 +15,6 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v4.widget.TextViewCompat;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -26,18 +24,15 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
+import com.example.ht.d2d_one.R;
 import com.example.ht.d2d_one.communication.ClientSocket;
 import com.example.ht.d2d_one.communication.MyServerSocket;
+import com.example.ht.d2d_one.icn.IcnOfGO;
+import com.example.ht.d2d_one.intraGroupCommunication.IntraCommunication;
 import com.example.ht.d2d_one.util.FindResources;
+import com.example.ht.d2d_one.util.WifiDeviceWithLabel;
 
-import org.w3c.dom.Text;
-
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -45,12 +40,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class DeviceListFragment extends ListFragment implements WifiP2pManager.PeerListListener,
+public class BasicWifiDirectBehavior extends ListFragment implements WifiP2pManager.PeerListListener,
         WifiP2pManager.ConnectionInfoListener,WifiP2pManager.GroupInfoListener{
     public int i=1;
     private boolean firstInterGroup = true;
     View mContentView = null;
     ProgressDialog processDialog =null;
+    public IcnOfGO icnOfGO = new IcnOfGO();
     private final static int IS_RESOURCE = 1 ;
     private String allSourceFromClient = null;
     private  WifiP2pDevice mWifiP2pDevice;
@@ -155,10 +151,15 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                         Log.d(MainActivity.TRG,"调用publishService函数成功啦啦啦啦啦啦啦啦啦"+label);
 
                         Log.d("组主????????????????",String.valueOf(mWifiP2pDevice.isGroupOwner()));
-                        //new MyServerSocket(mWifiP2pDevice.deviceAddress,30000,"read").start();
-                        myServerSocket = new MyServerSocket(mWifiP2pDevice.deviceAddress,30000,"read");
-                        myServerSocket.start();
-                        Log.d("服务socket","组主开启服务端socket");
+                        /**
+                         * 2018-11-20 修改之前的MyServerSocket构造器，添加一个IcnOfX(IcnOfGO,IcnOfClient,IcnOfGW等)，
+                         * 因为像GM等表需要在子线程中使用
+                         */
+                        if(mWifiP2pDevice.isGroupOwner()){
+                            myServerSocket = new MyServerSocket(icnOfGO,mWifiP2pDevice.deviceAddress,30000,"read");
+                            myServerSocket.start();
+                            Log.d("服务socket","组主开启服务端socket");
+                        }
                     }
                 }).create();
                 dlg.show();
@@ -176,6 +177,7 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
         public Map<String,String> resultResourceMap = new HashMap<>();
         private String messageFromClient = null;
         private String mSource = "电影-音乐-安装包-文字";
+        private String aimGO;
         //macOfAll用来存放所有设备的mac地址信息，目前没有用处
         private List<String> macOfAll = new ArrayList<>();
         private String[] splitMessage;
@@ -251,6 +253,9 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                     }
                     Log.d("电影列表中的信息：",movieMap.toString());
                 }
+            }else if (message.what == 3){
+                    aimGO = (String)message.obj;
+                    Log.d("推荐的组主mac地址",aimGO);
             }
         }
 
@@ -418,7 +423,7 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                 @Override
                 public void onClick(View v) {
                     //页面跳转，进入第二个页面
-                    Intent intent = new Intent(getActivity(),Main2Activity.class);
+                    Intent intent = new Intent(getActivity(),IntraCommunication.class);
                     intent.putExtra("deviceAddress",mWifiP2pDevice.deviceAddress);
                     intent.putExtra("isGO",isGO);
                     startActivity(intent);
@@ -437,22 +442,35 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
                 }
             });
             /**
-             * toBeGateway 按钮中的事件包括两个：
-             * 与组主进行信息交互，将自身周围的组主信息发送给当前组主；组主将判断后的信息发送给组员
-             * 通过wifiIntentManger.java进行LC连接
+             * toBeGateway 按钮中的事件包括三个：
+             * 1、与组主进行信息交互，将自身周围的组主信息发送给当前组主；2、组主将判断后的信息发送给组员 3、根据收到的信息建立LC连接
+             * 所以既需要给组主发送消息，有需要接收组主返回的推荐信息，所以，点击toBeGateway 时要开启组员设备的服务端socket
+             * 通过AutoConnectionWithAimedWifi.java进行LC连接
              */
             mContentView.findViewById(R.id.toBeGateway).setOnClickListener(new View.OnClickListener(){
                 String temp = "";
+                String aimGOInfo;
                 @Override
                 public void onClick(View v){
                     List<String> nearbyGO = new ArrayList<>();
-                    for(int i =0;i<ePeers.size();i++){
-                        temp = ePeers.get(i).getDevice().deviceAddress+"/"+ePeers.get(i).getDevice().deviceName+"/"+ePeers.get(i).getLabel();
-                        nearbyGO.add(temp);
+                    if(ePeers.size()==0){
+                        Log.d("附近没有组","您暂时无法成为网关节点");
+                    }else{
+                        for(int i =0;i<ePeers.size();i++){
+                            temp = ePeers.get(i).getDevice().deviceAddress+"/"+ePeers.get(i).getLabel();
+                            nearbyGO.add(temp);
+                        }
+                        temp = nearbyGO.toString();
+                        Log.d("附近组主信息----",temp);
+                        new ClientSocket("192.168.49.1",30000,"write","toBeGateway"+"-"+temp).start();
+                        new MyServerSocket(mWifiP2pDevice.deviceAddress,30002,"read", "GW").start();
                     }
-                    temp = nearbyGO.toString();
-                    Log.d("附近组主信息----",temp);
-                    new ClientSocket("192.168.49.1",30000,"write","toBeGateway"+"-"+temp).start();
+                    aimGOInfo = messageHandler.aimGO;
+                    Log.d("推荐的组主信息：：：：：",aimGOInfo);
+                    /**
+                     * 调用工具类中的autoWifiConnection.java 2018-11-21
+                     */
+
                 }
             });
         }
@@ -570,7 +588,7 @@ public class DeviceListFragment extends ListFragment implements WifiP2pManager.P
         }
     }
     public interface DeviceActionListener{
-      void connect(WifiP2pConfig wifiP2pConfig,WifiP2pDevice wifiP2pDevice);
+      void connect(WifiP2pConfig wifiP2pConfig, WifiP2pDevice wifiP2pDevice);
       void disconnect();
       void publishService(String string);
       void createGroup(WifiP2pDevice wifiP2pDevice);

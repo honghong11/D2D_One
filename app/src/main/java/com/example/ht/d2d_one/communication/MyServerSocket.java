@@ -1,9 +1,9 @@
 package com.example.ht.d2d_one.communication;
 
-import android.net.wifi.p2p.WifiP2pDevice;
-import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+
+import com.example.ht.d2d_one.icn.IcnOfGO;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -12,7 +12,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
-import static com.example.ht.d2d_one.Main2Activity.main2ActivityMessagHandler;
+import static com.example.ht.d2d_one.intraGroupCommunication.IntraCommunication.main2ActivityMessagHandler;
+import static com.example.ht.d2d_one.bisicWifiDirect.BasicWifiDirectBehavior.messageHandler;
 
 public class MyServerSocket extends Thread{
     private ServerSocket serverSocket;
@@ -21,6 +22,7 @@ public class MyServerSocket extends Thread{
     private List<Socket> socketList = new ArrayList<Socket>();
     private String MAC = null;
     private String tag;
+    private IcnOfGO icnOfGO = new IcnOfGO();
 
     public String getTag() {
         return tag;
@@ -65,6 +67,13 @@ public class MyServerSocket extends Thread{
         this.label = label;
         this.tag = tag;
     }
+    //因为许多Icn操作需要在子线程中做，需要IcnOfGO去操作其中的各个表格
+    public MyServerSocket(IcnOfGO icnOfGO,String MAC,int port,String label){
+        this.icnOfGO = icnOfGO;
+        this.MAC = MAC;
+        this.port = port;
+        this.label = label;
+    }
     public MyServerSocket(String MAC, int port, String label){
         this.MAC = MAC;
         this.label = label;
@@ -74,19 +83,37 @@ public class MyServerSocket extends Thread{
         try{
         serverSocket = new ServerSocket(port);
         if(tag!=null){
-            while(true){
-                Log.d("MyServer","ClientMyServer is listening...");
-                s = serverSocket.accept();
-                if(label.equals("read")){
-                    String resultFromGO = read(s);
-                    s.close();
-                    Message message = Message.obtain();
-                    message.what = 3;
-                    message.obj = resultFromGO;
-                    if(message.obj!=null){
-                        Log.d("从组主节点获取的资源查询结果：",message.obj.toString());
+            if(tag.equals("clent")){
+                while(true){
+                    Log.d("MyServer","ClientMyServer is listening...");
+                    s = serverSocket.accept();
+                    if(label.equals("read")){
+                        String resultFromGO = read(s);
+                        s.close();
+                        Message message = Message.obtain();
+                        message.what = 3;
+                        message.obj = resultFromGO;
+                        if(message.obj!=null){
+                            Log.d("从组主节点获取的资源查询结果：",message.obj.toString());
+                        }
+                        main2ActivityMessagHandler.sendMessage(message);
                     }
-                    main2ActivityMessagHandler.sendMessage(message);
+                }
+            }else if(tag.equals("GW")){
+                while (true){
+                    Log.d("GMServer","GMServer is listening...");
+                    s = serverSocket.accept();
+                    if(label.equals("read")){
+                        String aimGO = read(s);
+                        s.close();
+                        Message message = Message.obtain();
+                        message.what = 3;
+                        message.obj = aimGO;
+                        if(message.obj!=null){
+                            Log.d("推荐组主的MAC地址",message.obj.toString());
+                        }
+                        messageHandler.sendMessage(message);
+                    }
                 }
             }
         }else{
@@ -94,12 +121,11 @@ public class MyServerSocket extends Thread{
                 Log.d("MyServer","GOMyServer is listening...");
                 s = serverSocket.accept();
                 socketList.add(s);
-                //accept之后转入到一个子线程socket中，负责与客户端socket之间到读写交互
-                new Thread(new MyServerSocketThread(MAC,s,label,socketList.size())).start();
-//                if(source.size() == socketList.size()){
-//                    //将资源信息发给主线程
-//                }
-                //这个子线程什么时候关？从逻辑上来讲应该是在组主离开本组的时候。
+                /**
+                 * accept之后转入到一个子线程socket中，负责与客户端socket之间到读写交互
+                 * 对于组主所开的线程，再加一个icnOfGO字段
+                 */
+                new Thread(new MyServerSocketThread(icnOfGO,MAC,s,label,socketList.size())).start();
             }
         }
         }catch(IOException e){
