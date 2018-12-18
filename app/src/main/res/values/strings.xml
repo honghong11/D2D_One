@@ -6,4 +6,5 @@
     <string name="input">请输入资源名称包括格式</string>
     <string name="findSource">点击查找</string>
     <string name="showResult">点击查看查询结果</string>
+    <string name="receiveMultiCast">点击接收组播信息</string>
 </resources>

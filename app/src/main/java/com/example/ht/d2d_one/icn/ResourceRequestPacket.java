@@ -1,9 +1,10 @@
 package com.example.ht.d2d_one.icn;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ResourceRequestPacket {
+public class ResourceRequestPacket implements Serializable{
     /**
      * 资源请求包，可由所有节点生成
      */
@@ -11,14 +12,23 @@ public class ResourceRequestPacket {
     public String MACOfRRN;
     public List<String> PathInfo = new ArrayList<>();
     public String TAG;
-    public String [] ResourceName = new String[2];
+    public String ResourceName;
+    public String TypeOfResourceName;
 
-    public ResourceRequestPacket(int TTL,String MACOfRRN,List<String> Path,String TAG,String[] Name){
+    public ResourceRequestPacket(int TTL,String MACOfRRN,List<String> Path,String TAG,String Name,String typeOfResourceName){
         this.TTL = TTL;
         this.MACOfRRN = MACOfRRN;
         this.PathInfo = Path;
         this.TAG = TAG;
         this.ResourceName = Name;
+        this.TypeOfResourceName = typeOfResourceName;
+    }
+    public ResourceRequestPacket(int TTL,String MACOfRRN,List<String> Path,String Name,String typeOfResourceName){
+        this.TTL = TTL;
+        this.MACOfRRN = MACOfRRN;
+        this.PathInfo = Path;
+        this.ResourceName = Name;
+        this.TypeOfResourceName = typeOfResourceName;
     }
     /**
      * 销毁已使用过的资源请求包,需要注意的是，一点销毁，则相关的所有引用全部消失。
@@ -37,5 +47,18 @@ public class ResourceRequestPacket {
         resourceRequestPacket.TTL = resourceRequestPacket.TTL-1;
         resourceRequestPacket.PathInfo.add(MACOfThisGO);
         return resourceRequestPacket;
+    }
+    /**
+     * 重写toString方法
+     */
+    public String toString(){
+        String string;
+        String path = null;
+        for(String str:PathInfo){
+            path = str+","+path;
+        }
+
+        string = Integer.toString(TTL)+"+"+MACOfRRN+"+"+path+"+"+TAG+"+"+ResourceName+"+"+TypeOfResourceName;
+        return string;
     }
 }

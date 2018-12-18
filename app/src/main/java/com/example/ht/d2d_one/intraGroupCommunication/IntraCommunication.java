@@ -3,6 +3,8 @@ package com.example.ht.d2d_one.intraGroupCommunication;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -19,24 +21,47 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.ht.d2d_one.R;
+import com.example.ht.d2d_one.bisicWifiDirect.BasicWifiDirectBehavior;
 import com.example.ht.d2d_one.communication.ClientSocket;
+import com.example.ht.d2d_one.communication.MyMulticastSocketThread;
 import com.example.ht.d2d_one.communication.MyServerSocket;
+import com.example.ht.d2d_one.icn.ResourceRequestPacket;
+import com.example.ht.d2d_one.util.GetIpAddrInP2pGroup;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class IntraCommunication extends Activity {
     //此处应该是资源查询结果，包括资源名称+对应的设备地址
+    WifiManager wifiManager;
     private ArrayList<String> sourceResultList = new ArrayList<>();
     private boolean isGO = false;
+    private boolean isGW = false;
+    private boolean alreadeBeginClientQueryServer =false;
     private String deviceAddress;
+    private String goMAC;
     private String mDeviceIpAddress;
     private String resultQurryFromGO;
+    //最多达到第四个组
+    private int RRTTL = 8;
+    private String RRMAC;
+    private List<String> pathInfo = new ArrayList<>();
+    private String tag;
+    private String resourceName;
+    private String typeOfResourceName;
     public boolean isClickQurrySourceButton = false;
     public static Main2ActivityMessagHandler main2ActivityMessagHandler = new Main2ActivityMessagHandler();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        wifiManager = (WifiManager)getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        try{
+            WifiManager.MulticastLock multicastLock = wifiManager.createMulticastLock("multicast.test");
+            multicastLock.acquire();
+        }catch (NullPointerException e){
+            e.printStackTrace();
+            Log.d("组播锁的开启","组播锁开启出现的异常");
+        }
         setContentView(R.layout.activity_main2);
         Button button = findViewById(R.id.quitCluster);
         button.setOnClickListener(new View.OnClickListener() {
@@ -46,32 +71,45 @@ public class IntraCommunication extends Activity {
                 finish();
             }
         });
-        Button buttonQurry = findViewById(R.id.findSource);
-        Button buttonQurryResult = findViewById(R.id.showResult);
+        Button buttonQuery = findViewById(R.id.findSource);
+        Button buttonQueryResult = findViewById(R.id.showResult);
+        Button buttonReveiveMultiCast = findViewById(R.id.receiveMultiCast);
         Intent intent = getIntent();
         Bundle bundle = intent.getExtras();
         if(bundle!=null){
             isGO = bundle.getBoolean("isGO");
+            isGW = bundle.getBoolean("isGW");
             deviceAddress = bundle.getString("deviceAddress");
+            goMAC = bundle.getString("goMAC");
         }
-        buttonQurry.setOnClickListener(new View.OnClickListener(){
-            EditText editTextSourceQurried = findViewById(R.id.resourceNameQurried);
+        buttonQuery.setOnClickListener(new View.OnClickListener(){
+            EditText editTextSourceQueried = findViewById(R.id.resourceNameQurried);
             Spinner spinnerSourceType = findViewById(R.id.typeOfSource);
             @Override
             public void onClick(View v){
                 //如果输入信息合法，则将查询信息发送给组主，并开启组员设备的socket服务监听模式
                 //还需要判断本设备是否为组主！！！！
-                if(editTextSourceQurried!=null&&spinnerSourceType!=null&&!spinnerSourceType.toString().equals("资源类别")){
-                    String qurryMessage = editTextSourceQurried.getText().toString()+"-"+spinnerSourceType.getSelectedItem().toString();
+                if(editTextSourceQueried!=null&&spinnerSourceType!=null&&!spinnerSourceType.toString().equals("资源类别")){
                     if(!isGO){
+                        /**
+                         * RR的生成,向组主发送RR,销毁RR,组员节点的cache添加
+                         */
+                        RRMAC = deviceAddress;
+                        resourceName = editTextSourceQueried.getText().toString();
+                        typeOfResourceName = spinnerSourceType.getSelectedItem().toString();
+                        ResourceRequestPacket resourceRequestPacket = new ResourceRequestPacket(RRTTL,RRMAC,pathInfo,resourceName,typeOfResourceName);
+                        Log.d("查询信息：",resourceName);
+                        Log.d("RR信息",resourceRequestPacket.toString());
                         isClickQurrySourceButton = true;
-                        //如果不是组主，则开启客户socket写，发送查询信息
-                        new ClientSocket("192.168.49.1",30000,"qurry",qurryMessage).start();
-                        //开启组员设备的服务端监听
-                        //！！！！这个deviceAddress应该不是Ip，这里先写在这里
+                        new ClientSocket("192.168.49.1",30000,"query",resourceRequestPacket.toString()).start();
+                        BasicWifiDirectBehavior.getGmCacheInformation().addCacheRecommend(System.currentTimeMillis(),resourceName+typeOfResourceName);
+                        resourceRequestPacket.destory(resourceRequestPacket);
                         Log.d("开启服务端的mac地址是：",deviceAddress);
-                        MyServerSocket myServerSocketTwo = new MyServerSocket(deviceAddress,30001,"read", "client");
-                        myServerSocketTwo.start();
+                        if(!alreadeBeginClientQueryServer){
+                            MyServerSocket myServerSocketTwo = new MyServerSocket(deviceAddress,30001,"read", "client");
+                            myServerSocketTwo.start();
+                            alreadeBeginClientQueryServer = true;
+                        }
                         Toast.makeText(IntraCommunication.this, "资源查询成功",Toast.LENGTH_SHORT).show();
                     }else{
                         //如果是组主，本地查询
@@ -83,7 +121,7 @@ public class IntraCommunication extends Activity {
         /**
          * 查询结果展示按钮，用来显示查询结果，也可以用来刷新
          */
-        buttonQurryResult.setOnClickListener(new View.OnClickListener(){
+        buttonQueryResult.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v){
                 if(isClickQurrySourceButton){
@@ -115,6 +153,32 @@ public class IntraCommunication extends Activity {
                 return resultSource;
             }
         });
+        /**
+         * 开启组播接收，localIp 是本设备使用Wi-Fi Direct连接到组主上所得到的IP地址。
+         * ipAddress 是本设备通过Wi-Fi连接到组后得到的IP地址
+         * 仅网关节点可以接收组播
+         */
+        buttonReveiveMultiCast.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(isGW){
+                    String p2pIp = GetIpAddrInP2pGroup.getLocalIPAddress();
+                    if(p2pIp!=null){
+                        Log.d("本设备的本地IP地址为",p2pIp);
+                    }
+                    WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+                    //Log.d("wifiInfo",wifiInfo.toString());
+                    int i = wifiInfo.getIpAddress();
+                    String wifiIpAddress = (i & 0xFF ) + "." + ((i >> 8 ) & 0xFF) + "." + ((i >> 16 ) & 0xFF) + "." + ( i >> 24 & 0xFF) ;
+                    Log.d("ip地址是", wifiIpAddress);
+                    MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread
+                            (goMAC,deviceAddress,40000,"recv","239.1.2.3",p2pIp,wifiIpAddress,true);
+                    myMulticastSocketThread.start();
+                    Log.d("开启组播接听","组播开始接收信息了!!!");
+                    //根据接收到的信息，更新RR, 并向外组转发
+                }
+            }
+        });
         //this.setListAdapter(new ResultSourceAdapter(this,R.layout.service_list,sourceResultList));
     }
     protected void onResume(){
@@ -136,12 +200,15 @@ public class IntraCommunication extends Activity {
         public String getResultQurryFromGO() {
             return resultQueryFromGO;
         }
+        private String multiCastInfo;
 
         @Override
         public void handleMessage(Message msg) {
             if(msg.what==3){
                 resultQueryFromGO = (String)msg.obj;
                 Log.d("查询返回信息",resultQueryFromGO);
+            }else if(msg.what == 7){
+                multiCastInfo = msg.obj.toString();
             }
         }
     }

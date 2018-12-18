@@ -174,16 +174,16 @@ public class CacheInformation {
                      resourceBackPacket.PathInfo.toString());
          }
     }
-    //LRU 缓存的数据，顺序不是插入的顺序而是访问的数据
-    class LRUCache extends LinkedHashMap<String,String>{
-        private int maxElements;
-        private LRUCache(int maxSize){
-            super(maxSize,0.75f,true);
-            maxElements = maxSize;
-        }
-        @Override
-        public boolean removeEldestEntry(java.util.Map.Entry eldest){
-            return size()>maxElements;
-        }
-    }
+//    //LRU 缓存的数据，顺序不是插入的顺序而是访问的数据
+//    class LRUCache extends LinkedHashMap<String,String>{
+//        private int maxElements;
+//        private LRUCache(int maxSize){
+//            super(maxSize,0.75f,true);
+//            maxElements = maxSize;
+//        }
+//        @Override
+//        public boolean removeEldestEntry(java.util.Map.Entry eldest){
+//            return size()>maxElements;
+//        }
+//    }
 }

@@ -1,5 +1,7 @@
 package com.example.ht.d2d_one.interGroupCommunication;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +36,10 @@ public class GateWay {
         this.macOfLcGO = macOfLcGO;
         this.macOfP2pGO = macOfP2pGO;
     }
+    public GateWay(String mac, String macOfP2pGO){
+        this.macOfDevice = mac;
+        this.macOfP2pGO = macOfP2pGO;
+    }
     public GateWay(boolean isGateWay){
         this.isGateWay = isGateWay;
     }
@@ -43,20 +49,25 @@ public class GateWay {
      *
      * @param macOfGatways 提取出网关节点信息表中已经LC连接的GOmac地址，记作集合B并通过字符串的值进行排序
      *                     第一个String是网关节点的MAC地址，第二个String是LC连接的组主的MAC地址
-     * @param nearbyGOInfo 准网关节点周围发现的组主信息，提取出mac地址，记作集合A 通过二分法于上述序列进行比对，得到A中存在B中没有的Mac地址
+     * @param nearbyGOInfo 准网关节点周围发现的组主信息，提取出mac地址，记作集合A 通过二分法于上述序列进行比对，得到A中存在B中没有的Mac地址。
+     *                     nearbyGOInfo需要除去当前组主
      * @return 给出一个推荐的附近组主节点，当aimGODevice的值不唯一，可以通过距离，信号值等做判断，现在就是随机取一个值。
      */
-    public String chooseWifiGO (Map<String,String> macOfGatways,String nearbyGOInfo){
+    public String chooseWifiGO (Map<String,String> macOfGatways,String nearbyGOInfo,String currentGOMAC){
         String aimGO;
         String [] nearbyAllGOInfo = nearbyGOInfo.split(",");
-        String [] nearMACInfo = new String[nearbyAllGOInfo.length];
+        List<String> nearLcGoMAC = new ArrayList<>();
+        int k =0;
         for(int i =0;i<nearbyAllGOInfo.length;i++){
             String [] temp = nearbyAllGOInfo[i].split("/");
-            nearMACInfo [i] = temp[0];
+            if(temp[0].compareTo(currentGOMAC)!=0){
+                nearLcGoMAC.add(temp[0]);
+            }
         }
+
         if(macOfGatways.size()==0){
-            int index = (int)Math.random()*nearMACInfo.length;
-            aimGO = nearMACInfo[index];
+            int index = (int)(Math.random()*k);
+            aimGO = nearLcGoMAC.get(index);
         }else{
             String [] macs = new String[macOfGatways.size()];
             int j =0;
@@ -64,8 +75,9 @@ public class GateWay {
                 macs[j] = macOfGatways.get(gwMAC);
                 j++;
             }
-            String [] resultMacs = quickSortByStringValue(macs,0, macs.length);
-            List<String> aimGODevice = binaryQuery(resultMacs,nearMACInfo);
+            Log.d("网关节点表信息",String.valueOf(macOfGatways.size()));
+            String [] resultMacs = quickSortByStringValue(macs,0, macs.length-1);
+            List<String> aimGODevice = binaryQuery(resultMacs,nearLcGoMAC);
             if(aimGODevice.size()==1){
                 aimGO = aimGODevice.get(0);
             }else{
@@ -112,7 +124,7 @@ public class GateWay {
         if(i>0){
             quickSortByStringValue(m,0,i-1);
         }
-        if(j<m.length){
+        if(j<m.length-1){
             quickSortByStringValue(m,i+i,m.length);
         }
         return m;
@@ -121,26 +133,30 @@ public class GateWay {
     /**
      * 利用二分法找到当前节点所触及的组而当前组主未触及的组的mac地址
      * @param resultMacs 当前组主所触及组按照mac地址的大小的排列
-     * @param nearbyGOInfo 当前节点所触及的组
+     * @param nearbyLCGOMAC 当前节点所触及的组的mac地址
      * @return
      */
-    public List<String> binaryQuery(String[] resultMacs, String[] nearbyGOInfo){
+    public List<String> binaryQuery(String[] resultMacs, List<String> nearbyLCGOMAC){
         List<String> aimedWifiGO = new ArrayList<>();
         int low = 0;
-        int high = resultMacs.length;
-        for(int i =0;i<nearbyGOInfo.length;i++){
+        int high = resultMacs.length-1;
+        int middle = (low+high)/2;
+        for(int i =0;i<nearbyLCGOMAC.size();i++){
             while(low<=high){
-                int middle = (low+high)/2;
-                if(nearbyGOInfo[i].compareTo(resultMacs[middle])==0){
+                if(nearbyLCGOMAC.get(i).compareTo(resultMacs[middle])==0){
+                    if(nearbyLCGOMAC.size()==1){
+                        aimedWifiGO.add(nearbyLCGOMAC.get(0));
+                        return aimedWifiGO;
+                    }
                     break;
-                }else if(nearbyGOInfo[i].compareTo(resultMacs[middle])>0){
+                }else if(nearbyLCGOMAC.get(i).compareTo(resultMacs[middle])>0){
                     low = middle;
                     middle = (low+high)/2;
-                    aimedWifiGO.add(nearbyGOInfo[i]);
+                    aimedWifiGO.add(nearbyLCGOMAC.get(i));
                 }else{
                     high = middle;
                     middle = (low+high)/2;
-                    aimedWifiGO.add(nearbyGOInfo[i]);
+                    aimedWifiGO.add(nearbyLCGOMAC.get(i));
                 }
             }
         }

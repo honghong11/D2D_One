@@ -40,11 +40,17 @@
        android:id="@+id/findSource"
        android:text="@string/findSource"/>
    <Button
-       android:layout_width="wrap_content"
-       android:layout_height="wrap_content"
-       android:layout_gravity="right"
-       android:id="@+id/showResult"
-       android:text="@string/showResult"/>
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="right"
+    android:id="@+id/showResult"
+    android:text="@string/showResult"/>
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right"
+        android:id="@+id/receiveMultiCast"
+        android:text="@string/receiveMultiCast"/>
 
  <!--<LinearLayout
      android:layout_width="match_parent"

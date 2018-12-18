@@ -2,20 +2,30 @@ package com.example.ht.d2d_one.communication;
 
 import android.util.Log;
 
+import com.example.ht.d2d_one.icn.ResourceRequestPacket;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ClientSocket extends Thread {
-    private  Socket socket;
     private String label;
     private String host = null;
     private String content =null;
     final private int QURRYFROMGO =3;
     private int port;
+    private int RRTTL = 8;
+    private String RRMAC;
+    private List<String> pathInfo = new ArrayList<>();
+    private String tag;
+    private String resourceName;
+    private String typeOfResourcename;
+    private ResourceRequestPacket resourceRequestPacket = new ResourceRequestPacket(RRTTL,RRMAC,pathInfo,resourceName,typeOfResourcename);
 
     public String getContent() {
         return content;
@@ -31,7 +41,12 @@ public class ClientSocket extends Thread {
         this.port = port;
         this.label = label;
         this.content = content;
-
+    }
+    public ClientSocket(String host, int port, String label, ResourceRequestPacket resourceRequestPacket){
+        this.host = host;
+        this.port = port;
+        this.label = label;
+        this.resourceRequestPacket = resourceRequestPacket;
     }
 
     public String getLabel() {
@@ -40,22 +55,23 @@ public class ClientSocket extends Thread {
 
     public void setLabel(String label) {
         this.label = label;
-    }
+    };
 
     public void run(){
         try{
-            socket = new Socket(host,port);
+            Socket socket = new Socket(host,port);
             if(label.equals("read")){
                 //子线程中获取到数据，需要传给主线程。
                 String getContent = read(socket);
                 socket.close();
             }else if(label.equals("write")){
                 //首先获取资源，字符串类型,然后调用write方法
-                write(content);
+                write(socket,content);
                 socket.close();
                 Log.d("客户端写完毕","客户端写完了");
-            }else if(label.equals("qurry")){
-                qurry(true,content);
+            }else if(label.equals("query")){
+                query(socket,true,content);
+                //query(socket,true,resourceRequestPacket);
 //                String resultFromGO = read(socket);
 //                Message message = Message.obtain();
 //                message.what = QURRYFROMGO;
@@ -84,7 +100,7 @@ public class ClientSocket extends Thread {
         }
         return content;
     }
-    public void write(String resource){
+    public void write(Socket socket,String resource){
         try{
             BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             bufferedWriter.write(resource);
@@ -95,9 +111,9 @@ public class ClientSocket extends Thread {
         }
     }
     //qurry 和write 的区别在于qurry需要加一个标签，让组主服务端可以判别
-    public void qurry(boolean forQurry,String source){
+    public void query(Socket socket,boolean forQurry,String source){
         try{
-            String qurrySource = String.valueOf(forQurry)+"-"+source;
+            String qurrySource = String.valueOf(forQurry)+"+"+source;
             BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
             bufferedWriter.write(qurrySource);
             Log.d("客户端查询","客户端查询成功");
@@ -106,4 +122,17 @@ public class ClientSocket extends Thread {
             e.printStackTrace();
         }
     }
+    //使用toString 方法比较容易传递数据，暂时不使用对象传递数据
+//    public void query(Socket socket,boolean forQurry,ResourceRequestPacket resourceRequestPacket){
+//        try{
+//            resourceRequestPacket.TAG = String.valueOf(forQurry);
+//            OutputStream outputStream = socket.getOutputStream();
+//            ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+//            objectOutputStream.writeObject(resourceRequestPacket);
+//            objectOutputStream.close();
+//            Log.d("客户端查询","客户端查询成功");
+//        }catch (IOException e){
+//            e.printStackTrace();
+//        }
+//    }
 }

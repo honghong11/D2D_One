@@ -6,16 +6,58 @@ import com.example.ht.d2d_one.interGroupCommunication.GateWay;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class IcnOfGO {
+public class IcnOfNode {
     public boolean isGO = false;
+    private String goMAC;
+    private String gmMAC;
+
+    public void setGoMAC(String goMAC) {
+        this.goMAC = goMAC;
+    }
+
+    public void setGmMAC(String gmMAC) {
+        this.gmMAC = gmMAC;
+    }
+
+    public void setGwMAC(String gwMAC) {
+        this.gwMAC = gwMAC;
+    }
+
+    public void setGW(boolean GW) {
+        isGW = GW;
+    }
+
+    private String gwMAC;
+    private boolean isGW;
+    private CacheInformation cacheInformation;
+    private Map<String,String > GM = new LinkedHashMap<>();
+    List<Map<String,List<String>>> QR = new ArrayList<Map<String,List<String>>>();
+    private Map<String,String> RN = new HashMap<>();
+    public IcnOfNode(Map<String,String>RN, List<Map<String,List<String>>> QR, Map<String,String> GM, CacheInformation cacheInformation, String mac){
+        this.RN = RN;
+        this.QR = QR;
+        this.GM = GM;
+        this.cacheInformation = cacheInformation;
+        this.goMAC = mac;
+    }
+    public IcnOfNode(CacheInformation cacheInformation,String mac){
+        this.cacheInformation = cacheInformation;
+        this.gmMAC = mac;
+    }
+    public IcnOfNode(CacheInformation cacheInformation, String mac,boolean isGW){
+        this.cacheInformation =cacheInformation;
+        this.gwMAC = mac;
+        this.isGW = isGW;
+    }
     /**
      * Map类型，key值是RON节点的MAC地址和资源名称，value值是存储路径
      * RN
      */
-    public Map<String,String> RN = new HashMap<>();
+    //private Map<String,String> RN = new HashMap<>();
     /**
      * 该方法在组刚组建的时候或者组员更新以及缓存更新的时候调用，增添RN表
      * @param MACOfRON
@@ -64,8 +106,8 @@ public class IcnOfGO {
             //这里在搜索的时候仅仅是字符串的匹配,以后应该改成一个更加快速和适配的算法，可以定义一个匹配率，
            // 当达到阈值就认为是匹配的。
            String [] name = bothKey[1].split(".");
-            if((name[0].compareTo(resourceRequestPacket.ResourceName[0])==0)&&
-                    (name[1].compareTo(resourceRequestPacket.ResourceName[1])==0)){
+            if((name[0].compareTo(resourceRequestPacket.ResourceName)==0)&&
+                    (name[1].compareTo(resourceRequestPacket.TypeOfResourceName)==0)){
                 String returnString = bothKey[0]+"\\+"+RN.get(key);
                 result.add(returnString);
             }else{
@@ -81,15 +123,14 @@ public class IcnOfGO {
      * 的最后一个信息
      * QR
      */
-    List<Map<String,List<String>>> QR = new ArrayList<Map<String,List<String>>>();
-
+    //List<Map<String,List<String>>> QR = new ArrayList<Map<String,List<String>>>();
     /**
      * 新建QR表 结构为：RRNMAC＋name+type,路径信息
      * @param resourceRequestPacket
      */
     public void addQRTable(ResourceRequestPacket resourceRequestPacket){
-        String key = resourceRequestPacket.MACOfRRN+"\\+"+resourceRequestPacket.ResourceName[0]+
-                "\\+"+resourceRequestPacket.ResourceName[1];
+        String key = resourceRequestPacket.MACOfRRN+"\\+"+resourceRequestPacket.ResourceName+
+                "\\+"+resourceRequestPacket.TypeOfResourceName;
         List<String> value = resourceRequestPacket.PathInfo;
         Map<String,List<String>> temp = new HashMap<>();
         temp.put(key,value);
@@ -98,22 +139,25 @@ public class IcnOfGO {
 
     /**
      * 当GO收到查询信息resourceRequestPacket后，先进行QR表的查询,当查询到有结果则不再查询RN表，并且在QR中添加此记录
-     * 如果查询没有匹配结果则，前往QN中进行查询。
+     * 如果查询没有匹配结果，返回false去查cs
      * @param resourceRequestPacket
      */
-    public void qurryQRTable(ResourceRequestPacket resourceRequestPacket){
+    public boolean queryQRTable(ResourceRequestPacket resourceRequestPacket){
         String macOfRRN = resourceRequestPacket.MACOfRRN;
-        String qurryName = resourceRequestPacket.ResourceName[0];
-        String qurryNameType = resourceRequestPacket.ResourceName[1];
+        String qurryName = resourceRequestPacket.ResourceName;
+        String qurryNameType = resourceRequestPacket.TypeOfResourceName;
         for(int i =0;i<QR.size();i++){
             Map<String,List<String>> contentOfQR = QR.get(i);
             String key = macOfRRN+"\\+"+qurryName+"\\+"+qurryNameType;
-            if(contentOfQR.get(key)!=null){
+            if(contentOfQR.get(key)!=null) {
                 addQRTable(resourceRequestPacket);
-            }else{
-                queryRNTable(resourceRequestPacket);
+                return true;
             }
+//            }else{
+//                queryRNTable(resourceRequestPacket);
+//            }
         }
+        return false;
     }
     /**
      * 每隔10分钟自动查看QR表中是否还有记录，如果有则删除最后一条记录。如果没有则不删除。当组主节点建立时就直接执行这个方法，
@@ -151,7 +195,6 @@ public class IcnOfGO {
      * 在GateWay.java 中利用chooseWifiGO得到LC 组主的mac地址
      * 第一个String是网关节点的MAC地址，第二个String是LC相连的GO的MAC地址
      */
-    private Map<String,String > GM = new HashMap<>();
 
     public Map<String, String> getGM() {
         return GM;
@@ -166,6 +209,30 @@ public class IcnOfGO {
         gateWay.setGateWay(false);
         GM.remove(gateWay.getMacOfDevice());
         Log.d(gateWay.getMacOfDevice(),"他不再是网管节点啦");
+    }
+    public void clearGMTable(){
+        GM.clear();
+    }
+    /**
+     * 选取网关节点方法
+     * 过程很简单，对于value值相同的key值只选取一个
+     */
+    public List<String> chooseGW(Map<String,String> gm){
+        List<String> keys = new ArrayList<>();
+        List<String> values = new ArrayList<>();
+        for(String key: gm.keySet()){
+            keys.add(key);
+        }
+        for(String value:gm.values()){
+            values.add(value);
+        }
+        for(int i =0;i<values.size()-1;i++){
+            //如果前一个value和后一个value相等，对应的keys中选择靠后的一个，因为使用linkedhashmap是顺序的，靠后说明此网关节点比较新
+            if(values.get(i).equals(values.get(i+1))){
+                keys.remove(i);
+            }
+        }
+        return keys;
     }
     /**
      * 单副本情况下的GM网关节点
