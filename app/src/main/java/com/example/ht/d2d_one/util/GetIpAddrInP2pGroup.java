@@ -14,6 +14,35 @@ import android.util.Log;
 public class GetIpAddrInP2pGroup {
 
     private final static String p2pInt = "p2p0";
+    //对于华为的手机，p2p-wlan0-0,p2p-wlan0-1,p2p-wlan0-2...需要对前缀进行匹配
+    private final static String p2pIntHuawei = "p2p-wlan0";
+
+    public static String getGWWlanIP(String MAC){
+        String IP = "11";
+        BufferedReader br = null;
+        try{
+            br = new BufferedReader(new FileReader("/proc/net/arp"));
+            String line;
+            while((line = br.readLine())!=null){
+                Log.d("arp 文件内容",line);
+                String [] arpInfo = line.split(" +");
+                if(arpInfo.length>=4){
+                    if(arpInfo[3].equals(MAC)){
+                        IP = arpInfo[0];
+                    }
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            try{
+                br.close();
+            }catch (IOException e){
+                e.printStackTrace();
+            }
+        }
+        return IP;
+    }
 
     public static String getIPFromMac(String MAC) {
         /*
@@ -67,7 +96,7 @@ public class GetIpAddrInP2pGroup {
                     InetAddress inetAddress = enumIpAddr.nextElement();
 
                     String iface = intf.getName();
-                    if(iface.matches(".*" +p2pInt+ ".*")){
+                    if(iface.matches(".*" +p2pInt+ ".*")||iface.matches(".*"+p2pIntHuawei+".*")){
                         if (inetAddress instanceof Inet4Address) { // fix for Galaxy Nexus. IPv4 is easy to use :-)
                             return getDottedDecimalIP(inetAddress.getAddress());
                         }

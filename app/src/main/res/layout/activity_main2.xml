@@ -6,11 +6,21 @@
     android:layout_height="match_parent"
     tools:context=".intraGroupCommunication.IntraCommunication"
     android:orientation="vertical">
-   <Button
-       android:layout_width="wrap_content"
-       android:id = "@+id/quitCluster"
-       android:layout_height="wrap_content"
-       android:text="返回主页面"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:orientation="horizontal">
+        <Button
+            android:layout_width="wrap_content"
+            android:id = "@+id/quitCluster"
+            android:layout_height="wrap_content"
+            android:text="返回主页面" />
+        <Button
+            android:layout_width="wrap_content"
+            android:id = "@+id/test"
+            android:layout_height="wrap_content"
+            android:text="通信测试" />
+    </LinearLayout>
    <TextView
      android:text="查找资源："
      android:layout_height="wrap_content"
@@ -46,11 +56,17 @@
     android:id="@+id/showResult"
     android:text="@string/showResult"/>
     <Button
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="right"
+    android:id="@+id/receiveMultiCast"
+    android:text="@string/receiveMultiCast"/>
+    <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="right"
-        android:id="@+id/receiveMultiCast"
-        android:text="@string/receiveMultiCast"/>
+        android:id="@+id/sendUnicast"
+        android:text="@string/sendUnicast"/>
 
  <!--<LinearLayout
      android:layout_width="match_parent"

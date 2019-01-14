@@ -2,6 +2,7 @@ package com.example.ht.d2d_one.communication;
 
 import android.util.Log;
 
+import com.example.ht.d2d_one.bisicWifiDirect.BasicWifiDirectBehavior;
 import com.example.ht.d2d_one.icn.ResourceRequestPacket;
 
 import java.io.BufferedReader;
@@ -42,6 +43,13 @@ public class ClientSocket extends Thread {
         this.label = label;
         this.content = content;
     }
+    public ClientSocket(String host,int port,String label,String tag,String content){
+        this.host = host;
+        this.port = port;
+        this.label = label;
+        this.tag =tag;
+        this.content = content;
+    }
     public ClientSocket(String host, int port, String label, ResourceRequestPacket resourceRequestPacket){
         this.host = host;
         this.port = port;
@@ -64,11 +72,11 @@ public class ClientSocket extends Thread {
                 //子线程中获取到数据，需要传给主线程。
                 String getContent = read(socket);
                 socket.close();
-            }else if(label.equals("write")){
+            }else if(label.equals("write")&&tag == null){
                 //首先获取资源，字符串类型,然后调用write方法
                 write(socket,content);
                 socket.close();
-                Log.d("客户端写完毕","客户端写完了");
+                Log.d("客户端写完毕",content);
             }else if(label.equals("query")){
                 query(socket,true,content);
                 //query(socket,true,resourceRequestPacket);
@@ -83,6 +91,17 @@ public class ClientSocket extends Thread {
 //                main2ActivityMessagHandler.sendMessage(message);
                 socket.close();
                 Log.d("客户端发送查询完成","客户端发送查询完成");
+            }else if(tag.equals("interGroup")){
+                //不关闭此Socket,并将该Socket保存的ISI表中,1表示LC组主就是本设备
+                write(socket,content);
+                Log.d("客户端写完毕","客户端写完了");
+                BasicWifiDirectBehavior.icnOfGO.addInterGroupSocketInfo("1",socket);
+                while(true){
+                    String unicastMessage = read(socket);
+                    if(unicastMessage!=null){
+                        Log.d("来自网关节点的单播信息",unicastMessage);
+                    }
+                }
             }
         }catch (IOException e){
             e.printStackTrace();

@@ -4,6 +4,8 @@ import android.util.Log;
 
 import com.example.ht.d2d_one.interGroupCommunication.GateWay;
 
+import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -37,7 +39,7 @@ public class IcnOfNode {
     private Map<String,String > GM = new LinkedHashMap<>();
     List<Map<String,List<String>>> QR = new ArrayList<Map<String,List<String>>>();
     private Map<String,String> RN = new HashMap<>();
-    public IcnOfNode(Map<String,String>RN, List<Map<String,List<String>>> QR, Map<String,String> GM, CacheInformation cacheInformation, String mac){
+    public IcnOfNode(Map<String,Socket> ISI,Map<String,String>RN, List<Map<String,List<String>>> QR, Map<String,String> GM, CacheInformation cacheInformation, String mac){
         this.RN = RN;
         this.QR = QR;
         this.GM = GM;
@@ -48,7 +50,8 @@ public class IcnOfNode {
         this.cacheInformation = cacheInformation;
         this.gmMAC = mac;
     }
-    public IcnOfNode(CacheInformation cacheInformation, String mac,boolean isGW){
+    public IcnOfNode(Map<String,Socket>ISI,CacheInformation cacheInformation, String mac,boolean isGW){
+        this.ISI = ISI;
         this.cacheInformation =cacheInformation;
         this.gwMAC = mac;
         this.isGW = isGW;
@@ -237,4 +240,23 @@ public class IcnOfNode {
     /**
      * 单副本情况下的GM网关节点
      */
+
+    /**
+     * 添加一个记录组间TCP socket的Map，仅网关节点和组主节点持有 interGroupSocketInfo
+     * 第一个String是网关节点的mac地址
+     */
+    private Map<String,Socket> ISI = new HashMap<>();
+
+    public Map<String, Socket> getISI() {
+        return ISI;
+    }
+
+    //添加一个socket，并设置该socket保持活性
+    public Map<String,Socket> addInterGroupSocketInfo(String mac, Socket socket){
+        ISI.put(mac,socket);
+        return ISI;
+    }
+    public void destroyInterGroupSocketInfo(){
+        ISI.clear();
+    }
 }

@@ -4,15 +4,20 @@ import android.net.wifi.WifiManager;
 import android.os.Message;
 import android.util.Log;
 
+import com.example.ht.d2d_one.bisicWifiDirect.BasicWifiDirectBehavior;
 import com.example.ht.d2d_one.interGroupCommunication.GateWay;
 import com.example.ht.d2d_one.util.WifiAutoConnectManager;
 import com.example.ht.d2d_one.util.WifiDeviceWithLabel;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +32,7 @@ public class MyServerSocket extends Thread{
     private List<Socket> socketList = new ArrayList<Socket>();
     private String MAC = null;
     private String tag;
+    private boolean test = false;
     //Gateway对象
     private String deviceMAC;
     private String p2pGOMAC;
@@ -77,6 +83,15 @@ public class MyServerSocket extends Thread{
         this.tag = tag;
     }
     //因为许多Icn操作需要在子线程中做，需要IcnOfGO去操作其中的各个表格
+    public MyServerSocket(int port,boolean test){
+        this.port =port;
+        this.test =test;
+    }
+    public MyServerSocket(int port,String label,String tag){
+        this.port = port;
+        this.label = label;
+        this.tag = tag;
+    }
     public MyServerSocket(String MAC, int port, String label){
         this.MAC = MAC;
         this.port = port;
@@ -157,17 +172,58 @@ public class MyServerSocket extends Thread{
                         }
                     }
                 }
+            }else if(tag.equals("interGW")){
+                while (true){
+                    Log.d("开启组间单播监听。。。。。","组间单播");
+                    Socket goSocket = goServerSocket.accept();
+                    try{
+                        goSocket.setKeepAlive(true);
+                    }catch(SocketException e){
+                        e.printStackTrace();
+                    }
+                    if(label.equals("read")){
+                        String messageFromLCGO = read(goSocket);
+                        if(messageFromLCGO!=null){
+                            Log.d("来自LC组主的单播信息",messageFromLCGO);
+                            /**
+                             * 保存此socket信息
+                             */
+                            BasicWifiDirectBehavior.icnOfGW.addInterGroupSocketInfo(messageFromLCGO,goSocket);
+                            //复用该Socket，讲本组主的信息发给LC组主
+//                            try{
+//                                OutputStream os = goSocket.getOutputStream();
+//                                OutputStreamWriter ow = new OutputStreamWriter(os);
+//                                BufferedWriter writer = new BufferedWriter(ow);
+//                                writer.write("111111111111");
+//                                writer.flush();
+//                                //%%%%作为内容结束的标志。
+//                                //bufferedWriter.write(content+"-"+"%%%%");
+//                                Log.d("复用Socket写完成","复用写完成啦啦啦");
+//                            }catch(IOException e){
+//                                e.printStackTrace();
+//                            }
+                        }
+                    }
+                }
             }
         }else{
             while(true){
-                Socket goSocket = goServerSocket.accept();
-                Log.d("MyServer","GOMyServer is listening...");
-                socketList.add(goSocket);
-                /**
-                 * accept之后转入到一个子线程socket中，负责与客户端socket之间到读写交互
-                 * 对于组主所开的线程，再加一个icnOfGO字段
-                 */
-                new Thread(new MyServerSocketThread(MAC,goSocket,label,socketList.size())).start();
+                if(test){
+                    Socket socket = goServerSocket.accept();
+                    String message = read(socket);
+                    if(message!=null){
+                        Log.d("组间单播测试信息",message);
+                    }
+                }else{
+                    Socket goSocket = goServerSocket.accept();
+                    Log.d("MyServer","GOMyServer is listening...");
+                    socketList.add(goSocket);
+                    /**
+                     * accept之后转入到一个子线程socket中，负责与客户端socket之间到读写交互
+                     * 对于组主所开的线程，再加一个icnOfGO字段
+                     */
+                    new Thread(new MyServerSocketThread(MAC,goSocket,label,socketList.size())).start();
+                }
             }
         }
         }catch(IOException e){
@@ -184,6 +240,16 @@ public class MyServerSocket extends Thread{
             System.out.print(e);
         }
         return content;
+    }
+    public void write(Socket socket,String resource){
+        try{
+            BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            bufferedWriter.write(resource);
+            Log.d("客户端写","客户端写成功");
+            bufferedWriter.close();
+        }catch (IOException e){
+            e.printStackTrace();
+        }
     }
 //    public Object readObject(Socket socket){
 //        Object object = new Object();

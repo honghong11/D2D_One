@@ -23,6 +23,7 @@ import com.example.ht.d2d_one.icn.LRUCache;
 import com.example.ht.d2d_one.icn.MatchingAlgorithm;
 import com.example.ht.d2d_one.icn.ResourceRequestPacket;
 import com.example.ht.d2d_one.interGroupCommunication.GateWay;
+import com.example.ht.d2d_one.interGroupCommunication.MultiCast;
 
 import static com.example.ht.d2d_one.bisicWifiDirect.BasicWifiDirectBehavior.messageHandler;
 
@@ -114,7 +115,6 @@ public class MyServerSocketThread implements Runnable{
                     boolean isInQR = BasicWifiDirectBehavior.icnOfGO.queryQRTable(resourceRequestPacket);
                     Log.d("查询是否在QR中存在？？",String.valueOf(isInQR));
                     if(!isInQR){
-                        Map<String,String> resultMap = new HashMap<>();
                         if(messageFromClient[5]!=null&&messageFromClient[6]!=null){
                             //资源匹配
                             String qurryName = messageFromClient[5];
@@ -122,6 +122,7 @@ public class MyServerSocketThread implements Runnable{
                             Log.d("类别标签：::::",qurryType);
                             Log.d("类别：::::",qurryName);
                             String dataToBack;
+                            Map<String,String> resultMap = new HashMap<>();
                             switch (qurryType){
                                 case "movie":
                                     MatchingAlgorithm matchingAlgorithm = new MatchingAlgorithm(qurryName,messageHandler.getQurryMovieMap());
@@ -144,13 +145,14 @@ public class MyServerSocketThread implements Runnable{
                                         if(messageFromClient[5]!=null&&messageFromClient[6]!=null){
                                             updateCacheTable(messageFromClient[5],messageFromClient[6]);
                                         }
+                                        Log.d("到这里了","哈哈哈哈");
                                         intraGroupMulticasatForward();
                                     }
                                     break;
                                 case "music":
                                     matchingAlgorithm = new MatchingAlgorithm(qurryName,messageHandler.getQurryMusicMap());
                                     resultMap = matchingAlgorithm.matchingCharacterAlgorithm(qurryName,messageHandler.getQurryMusicMap());
-                                    if(resultMap!=null){
+                                    if(resultMap.size()!=0){
                                         dataToBack = mapToString(resultMap);
                                         if(dataToBack!=null){
                                             Log.d("组主节点处的结果信息",dataToBack);
@@ -162,6 +164,7 @@ public class MyServerSocketThread implements Runnable{
                                         if(messageFromClient[5]!=null&&messageFromClient[6]!=null){
                                             updateCacheTable(messageFromClient[5],messageFromClient[6]);
                                         }
+                                        Log.d("到这里了","哈哈哈哈");
                                         intraGroupMulticasatForward();
                                     }
                                     socket.close();
@@ -169,9 +172,9 @@ public class MyServerSocketThread implements Runnable{
                                 case "packet":
                                     matchingAlgorithm = new MatchingAlgorithm(qurryName,messageHandler.getQurryPackageMap());
                                     resultMap = matchingAlgorithm.matchingCharacterAlgorithm(qurryName,messageHandler.getQurryPackageMap());
-                                    if(resultMap!=null){
+                                    if(resultMap.size()!=0){
                                         dataToBack = mapToString(resultMap);
-                                        if(dataToBack!=null){
+                                         if(dataToBack!=null){
                                             Log.d("组主节点处的结果信息",dataToBack);
                                             ClientSocket clientSocketGO  = new ClientSocket(clientIpAddrss,30001,"write",dataToBack);
                                             clientSocketGO.start();
@@ -181,6 +184,7 @@ public class MyServerSocketThread implements Runnable{
                                         if(messageFromClient[5]!=null&&messageFromClient[6]!=null){
                                             updateCacheTable(messageFromClient[5],messageFromClient[6]);
                                         }
+                                        Log.d("到这里了","哈哈哈哈");
                                         intraGroupMulticasatForward();
                                     }
                                     socket.close();
@@ -188,7 +192,7 @@ public class MyServerSocketThread implements Runnable{
                                 case "word":
                                     matchingAlgorithm = new MatchingAlgorithm(qurryName,messageHandler.getQurryWordMap());
                                     resultMap = matchingAlgorithm.matchingCharacterAlgorithm(qurryName,messageHandler.getQurryWordMap());
-                                    if(resultMap!=null){
+                                    if(resultMap.size()!=0){
                                         dataToBack = mapToString(resultMap);
                                         if(dataToBack!=null){
                                             Log.d("组主节点处的结果信息",dataToBack);
@@ -200,6 +204,7 @@ public class MyServerSocketThread implements Runnable{
                                         if(messageFromClient[5]!=null&&messageFromClient[6]!=null){
                                             updateCacheTable(messageFromClient[5],messageFromClient[6]);
                                         }
+                                        Log.d("到这里了","哈哈哈哈");
                                         intraGroupMulticasatForward();
                                     }
                                     socket.close();
@@ -208,7 +213,6 @@ public class MyServerSocketThread implements Runnable{
                                     //对于无此类型的数据，不再转发
                                     Log.d("查询结果","无此查询类型，请重新输入：");
                                     socket.close();
-
 //                                    //更新QR
 //                                    BasicWifiDirectBehavior.icnOfGO.addQRTable(resourceRequestPacket);
                             }

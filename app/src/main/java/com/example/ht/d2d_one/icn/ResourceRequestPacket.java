@@ -53,11 +53,17 @@ public class ResourceRequestPacket implements Serializable{
      */
     public String toString(){
         String string;
-        String path = null;
-        for(String str:PathInfo){
-            path = str+","+path;
+        String path;
+        if(PathInfo.size()==0){
+            path = null;
+        }else{
+            path = PathInfo.get(0);
+            int i =0;
+            while (i<PathInfo.size()&&PathInfo.get(i)!=null){
+                path = path +","+ PathInfo.get(i);
+                i++;
+            }
         }
-
         string = Integer.toString(TTL)+"+"+MACOfRRN+"+"+path+"+"+TAG+"+"+ResourceName+"+"+TypeOfResourceName;
         return string;
     }

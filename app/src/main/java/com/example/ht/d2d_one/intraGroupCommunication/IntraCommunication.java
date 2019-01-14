@@ -26,6 +26,8 @@ import com.example.ht.d2d_one.communication.ClientSocket;
 import com.example.ht.d2d_one.communication.MyMulticastSocketThread;
 import com.example.ht.d2d_one.communication.MyServerSocket;
 import com.example.ht.d2d_one.icn.ResourceRequestPacket;
+import com.example.ht.d2d_one.interGroupCommunication.Unicast;
+import com.example.ht.d2d_one.test.TestPage;
 import com.example.ht.d2d_one.util.GetIpAddrInP2pGroup;
 
 import java.util.ArrayList;
@@ -39,6 +41,7 @@ public class IntraCommunication extends Activity {
     private boolean isGW = false;
     private boolean alreadeBeginClientQueryServer =false;
     private String deviceAddress;
+    private String wifiAddress;
     private String goMAC;
     private String mDeviceIpAddress;
     private String resultQurryFromGO;
@@ -74,13 +77,16 @@ public class IntraCommunication extends Activity {
         Button buttonQuery = findViewById(R.id.findSource);
         Button buttonQueryResult = findViewById(R.id.showResult);
         Button buttonReveiveMultiCast = findViewById(R.id.receiveMultiCast);
-        Intent intent = getIntent();
+        Button buttonSendUnicast = findViewById(R.id.sendUnicast);
+        final Intent intent = getIntent();
         Bundle bundle = intent.getExtras();
         if(bundle!=null){
             isGO = bundle.getBoolean("isGO");
             isGW = bundle.getBoolean("isGW");
             deviceAddress = bundle.getString("deviceAddress");
-            goMAC = bundle.getString("goMAC");
+            if(!isGO){
+                goMAC = bundle.getString("goMAC");
+            }
         }
         buttonQuery.setOnClickListener(new View.OnClickListener(){
             EditText editTextSourceQueried = findViewById(R.id.resourceNameQurried);
@@ -169,17 +175,45 @@ public class IntraCommunication extends Activity {
                     WifiInfo wifiInfo = wifiManager.getConnectionInfo();
                     //Log.d("wifiInfo",wifiInfo.toString());
                     int i = wifiInfo.getIpAddress();
-                    String wifiIpAddress = (i & 0xFF ) + "." + ((i >> 8 ) & 0xFF) + "." + ((i >> 16 ) & 0xFF) + "." + ( i >> 24 & 0xFF) ;
-                    Log.d("ip地址是", wifiIpAddress);
+                    wifiAddress = (i & 0xFF ) + "." + ((i >> 8 ) & 0xFF) + "." + ((i >> 16 ) & 0xFF) + "." + ( i >> 24 & 0xFF) ;
+                    Log.d("ip地址是", wifiAddress);
                     MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread
-                            (goMAC,deviceAddress,40000,"recv","239.1.2.3",p2pIp,wifiIpAddress,true);
+                            (goMAC,deviceAddress,40000,"recv","239.1.2.3",p2pIp,wifiAddress,true);
                     myMulticastSocketThread.start();
                     Log.d("开启组播接听","组播开始接收信息了!!!");
                     //根据接收到的信息，更新RR, 并向外组转发
                 }
             }
         });
+        buttonSendUnicast.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+                //Log.d("wifiInfo",wifiInfo.toString());
+                int i = wifiInfo.getIpAddress();
+                wifiAddress = (i & 0xFF ) + "." + ((i >> 8 ) & 0xFF) + "." + ((i >> 16 ) & 0xFF) + "." + ( i >> 24 & 0xFF) ;
+                if(isGW){
+                    Unicast unicast = new Unicast("192.168.49.1",30000,wifiAddress,"7777777777777777777","write");
+                    unicast.start();
+                }
+            }
+        });
         //this.setListAdapter(new ResultSourceAdapter(this,R.layout.service_list,sourceResultList));
+        Button buttonTest = findViewById(R.id.test);
+        buttonTest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent1 = new Intent(getApplicationContext(),TestPage.class);
+                intent1.putExtra("p2pAddress",GetIpAddrInP2pGroup.getLocalIPAddress());
+                WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+                int i = wifiInfo.getIpAddress();
+                wifiAddress = (i & 0xFF ) + "." + ((i >> 8 ) & 0xFF) + "." + ((i >> 16 ) & 0xFF) + "." + ( i >> 24 & 0xFF) ;
+                intent1.putExtra("wifiAddress",wifiAddress);
+                intent1.putExtra("isGO",isGO);
+                intent1.putExtra("isGW",isGW);
+                startActivity(intent1);
+            }
+        });
     }
     protected void onResume(){
         super.onResume();

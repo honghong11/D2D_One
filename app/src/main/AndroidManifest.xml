@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.ht.d2d_one">
-    <uses-feature android:name="android.hardware.wifi"/>
+
     <uses-sdk android:minSdkVersion="14" />
+
+    <uses-feature android:name="android.hardware.wifi" />
 
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
@@ -23,12 +25,17 @@
         android:theme="@style/AppTheme">
         <activity android:name=".bisicWifiDirect.MainActivity">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".intraGroupCommunication.IntraCommunication"
+        <activity
+            android:name=".intraGroupCommunication.IntraCommunication"
             android:label="组内页面">
+        </activity>
+        <activity android:name=".test.TestPage"
+            android:label="通信测试页面">
         </activity>
     </application>
 

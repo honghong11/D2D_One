@@ -43,6 +43,10 @@ public class GateWay {
     public GateWay(boolean isGateWay){
         this.isGateWay = isGateWay;
     }
+    public GateWay(boolean isGateWay,String mac){
+        this.isGateWay = isGateWay;
+        this.macOfDevice = mac;
+    }
 
     /**
      *当GM中没有记录，则随机从准网关节点周围的GO中随机抽取一个作为连接对象。若GM中有记录，则通过一个快排，一个二分得到推荐的连接GO
