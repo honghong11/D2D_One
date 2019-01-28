@@ -123,7 +123,10 @@ public class TestPage extends Activity {
 //                    ClientSocket clientSocket = new ClientSocket(ip,50004,"write","来自LC组主的单播信息");
 //                    clientSocket.start();
 //                }
-                //对于网关节点和LC组主节点的操作有一些稍微的区别，因为两者存储socket的方式不同，需要不同的方式，复用socket传递数据需要开子线程
+                /**
+                 * 对于网关节点和LC组主节点的操作有一些稍微的区别，因为两者存储socket的方式不同，需要不同的方式，复用socket传递数据需要开子线程
+                 * LC组主在复用socket时需要指明socket连接的网关mac地址，根据回溯信息中的path来判断
+                 */
                 if(isGO){
                     Socket socket = BasicWifiDirectBehavior.icnOfGO.getISI().get("1");
                     SocketReuse socketReuse = new SocketReuse(socket,"write","1111111111111");

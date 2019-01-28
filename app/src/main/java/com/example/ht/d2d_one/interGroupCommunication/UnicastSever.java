@@ -3,6 +3,7 @@ package com.example.ht.d2d_one.interGroupCommunication;
 import android.util.Log;
 
 import com.example.ht.d2d_one.bisicWifiDirect.BasicWifiDirectBehavior;
+import com.example.ht.d2d_one.util.GetIpAddrInP2pGroup;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -37,10 +38,10 @@ public class UnicastSever extends Thread{
                         Log.d("网关接收到的来自LC组主的单播",message);
                     }
                     socket.setKeepAlive(true);
+                    //对于网关节点来讲，只连接一个LC组主，所以也就只保存一个LC组主的socket连接，这里用2来标识
                     BasicWifiDirectBehavior.icnOfGW.addInterGroupSocketInfo("2",socket);
-                    //将网关节点的mac地址发给LC组主，LC组主更新自己的GWT表
-                    //SocketReuse socketReuse = new SocketReuse(socket);
-                    //socketReuse.write(gomac+"+"+gwmac);
+                    gwmac = GetIpAddrInP2pGroup.getWlanMac();
+                    Log.d("网关节点的wlan0口mac地址",gwmac);
 
                     BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
                     bufferedWriter.write(gomac+"+"+gwmac);
@@ -54,6 +55,10 @@ public class UnicastSever extends Thread{
                             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                             info = bufferedReader.readLine();
                             Log.d("收到来自LC组主节点的单播消息2",info);
+                            if(info.equals("data")){
+                                // TODO: 2019/1/21 关于数据包回溯的工作
+
+                            }
                         }catch (IOException e){
                             e.printStackTrace();
                         }

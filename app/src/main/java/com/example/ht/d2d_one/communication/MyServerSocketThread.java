@@ -96,8 +96,8 @@ public class MyServerSocketThread implements Runnable{
                  * 组主接收到查询后，处理RR
                  */
                 String[]messageFromClient = getResource.split("\\+");
-                //如果第一个部分为字符串true，则表明组主收到的为查询
                 /**
+                 * 如果第一个部分未字符串true，则表明组主收到的为查询
                  * 首先查询QR表，不论有没有命中，都要记录到QR表中，如果没有命中，就在CS中查看，如果是组内查询，则记录到Ｃache中
                  */
                 if(messageFromClient[0].equals("true")){
@@ -228,8 +228,8 @@ public class MyServerSocketThread implements Runnable{
                 else if(messageFromClient[0].equals("toBeGateway")){
                     // GMF 本组的网关节点信息
                     GMF = BasicWifiDirectBehavior.icnOfGO.getGM();
-                        //当前网关节点列表为空，直接将申请成为网关节点的设备成为网关节点，LC GO随机分配/
-                        // 或者根据组员携带来的邻近组主的信息比如信号强度
+                    //当前网关节点列表为空，直接将申请成为网关节点的设备成为网关节点，LC GO随机分配/
+                    // 或者根据组员携带来的邻近组主的信息比如信号强度
                     String macOfGM = null;
                     if(messageFromClient[1]!=null){
                         macOfGM = messageFromClient[1];
@@ -265,12 +265,14 @@ public class MyServerSocketThread implements Runnable{
                     //开启一个客户端，返回处理信息，允许设备离开
                     new ClientSocket(clientIpAddrss,30004,"write","allowed").start();
                     socket.close();
-                } else{
+                }
+                //组主设备接收来自组员设备的资源名称信息
+                else if(messageFromClient[0].equals("source")){
                     Log.d("资源清单:::::::",getResource);
                     //将资源从该子线程发送到主线程中，跨越一层线程
                     Message message = Message.obtain();
                     message.what = 2;
-                    message.obj = getResource;
+                    message.obj = messageFromClient[1];
                     if(message.obj!=null){
                         Log.d("寻找资源的子线程中message的信息：",message.obj.toString());
                     }

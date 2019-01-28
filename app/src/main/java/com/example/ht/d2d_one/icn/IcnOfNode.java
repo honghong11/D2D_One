@@ -4,6 +4,7 @@ import android.util.Log;
 
 import com.example.ht.d2d_one.interGroupCommunication.GateWay;
 
+import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
@@ -213,6 +214,14 @@ public class IcnOfNode {
         GM.remove(gateWay.getMacOfDevice());
         Log.d(gateWay.getMacOfDevice(),"他不再是网管节点啦");
     }
+    //当网关节点离开时，删除网关节点表中的该网关信息
+    public void updateGMTable2(String mac){
+        for(String string:GM.keySet()){
+            if(mac.equals(string)){
+                GM.remove(mac);
+            }
+        }
+    }
     public void clearGMTable(){
         GM.clear();
     }
@@ -256,7 +265,16 @@ public class IcnOfNode {
         ISI.put(mac,socket);
         return ISI;
     }
+    //当网关节点离开或者组主离开时，关闭所有复用socket连接，并清除ISI表
     public void destroyInterGroupSocketInfo(){
+        try{
+            for(String s:ISI.keySet()){
+                Socket socket = ISI.get(s);
+                socket.close();
+            }
+        }catch(IOException e){
+            e.printStackTrace();
+        }
         ISI.clear();
     }
 }

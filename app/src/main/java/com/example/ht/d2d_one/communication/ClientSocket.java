@@ -79,16 +79,6 @@ public class ClientSocket extends Thread {
                 Log.d("客户端写完毕",content);
             }else if(label.equals("query")){
                 query(socket,true,content);
-                //query(socket,true,resourceRequestPacket);
-//                String resultFromGO = read(socket);
-//                Message message = Message.obtain();
-//                message.what = QURRYFROMGO;
-//                message.obj = resultFromGO;
-//                if(message.obj!=null){
-//                    Log.d("查询返回的结果为：",message.obj.toString());
-//                }
-//                //MyServerSocket.handlerMyServerSocket.sendMessage(message);
-//                main2ActivityMessagHandler.sendMessage(message);
                 socket.close();
                 Log.d("客户端发送查询完成","客户端发送查询完成");
             }else if(tag.equals("interGroup")){

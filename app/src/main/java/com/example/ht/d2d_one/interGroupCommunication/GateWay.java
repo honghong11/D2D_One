@@ -135,8 +135,9 @@ public class GateWay {
     }
 
     /**
+     * 当附近只有一个组，那么该组就是推荐的LC组主，如果附近多余一个组主，通过二分，得到当前组主未连接的组主的mac地址。
      * 利用二分法找到当前节点所触及的组而当前组主未触及的组的mac地址
-     * @param resultMacs 当前组主所触及组按照mac地址的大小的排列
+     * @param resultMacs 当前组主所触及组按照mac地址的大小的排列(网关节点相连接的组主设备)
      * @param nearbyLCGOMAC 当前节点所触及的组的mac地址
      * @return
      */
@@ -145,25 +146,32 @@ public class GateWay {
         int low = 0;
         int high = resultMacs.length-1;
         int middle = (low+high)/2;
+        if(nearbyLCGOMAC.size()==1){
+            nearbyLCGOMAC.add(nearbyLCGOMAC.get(0));
+            return aimedWifiGO;
+        }
         for(int i =0;i<nearbyLCGOMAC.size();i++){
-            while(low<=high){
+            while(low<high){
                 if(nearbyLCGOMAC.get(i).compareTo(resultMacs[middle])==0){
-                    if(nearbyLCGOMAC.size()==1){
-                        aimedWifiGO.add(nearbyLCGOMAC.get(0));
-                        return aimedWifiGO;
-                    }
+                    nearbyLCGOMAC.remove(i);
                     break;
                 }else if(nearbyLCGOMAC.get(i).compareTo(resultMacs[middle])>0){
                     low = middle;
-                    middle = (low+high)/2;
-                    aimedWifiGO.add(nearbyLCGOMAC.get(i));
+                    middle = (low+high)/2+1;
+//                    aimedWifiGO.add(nearbyLCGOMAC.get(i));
                 }else{
                     high = middle;
                     middle = (low+high)/2;
-                    aimedWifiGO.add(nearbyLCGOMAC.get(i));
+//                    aimedWifiGO.add(nearbyLCGOMAC.get(i));
+                }
+            }
+            if(low == high){
+                if(nearbyLCGOMAC.get(i).compareToIgnoreCase(resultMacs[middle])==0){
+                    nearbyLCGOMAC.remove(i);
                 }
             }
         }
+        aimedWifiGO = nearbyLCGOMAC;
         return aimedWifiGO;
     }
 }

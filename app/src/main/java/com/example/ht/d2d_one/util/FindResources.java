@@ -19,7 +19,7 @@ public class FindResources{
         File[] files;
         files = dir.listFiles();
         if (files == null) {
-            source = "电影-音乐-安装包-文字";
+            source = "电影·音乐·安装包·文字";
             return;
         }
         for (File file : files) {
@@ -27,25 +27,25 @@ public class FindResources{
                 findResources(file);
             } else {
                 if (file.getName().endsWith(".mp4") || file.getName().endsWith(".mkv")) {
-                    resourceMovies.add(file.getAbsolutePath()+"+"+file.getName()+"|");
+                    resourceMovies.add(file.getAbsolutePath()+"="+file.getName()+"|");
                     //resource.put("movie",resourceMovies);
                 }
                 if (file.getName().endsWith(".mp3")) {
-                    resourceMusics.add(file.getAbsolutePath()+"+"+file.getName()+"|");
+                    resourceMusics.add(file.getAbsolutePath()+"="+file.getName()+"|");
                     //resource.put("music",resourceMusics);
                 }
                 if (file.getName().endsWith(".apk")) {
-                    resourcePackges.add(file.getAbsolutePath()+"+"+file.getName()+"|");
+                    resourcePackges.add(file.getAbsolutePath()+"="+file.getName()+"|");
                     //resource.put("package",resourcePackges);
                 }
                 if (file.getName().endsWith(".pdf")) {
-                    resourceWords.add(file.getAbsolutePath()+"+"+file.getName()+"|");
+                    resourceWords.add(file.getAbsolutePath()+"="+file.getName()+"|");
                     //resource.put("word",resourceWords);
                 }
             }
         }
-        source = resourceMovies.toString() + "-" +resourceMusics.toString() + "-"
-                + resourcePackges.toString() + "-" + resourceWords.toString();
+        source = resourceMovies.toString() + "·" +resourceMusics.toString() + "·"
+                + resourcePackges.toString() + "·" + resourceWords.toString();
     }
     public String getResources(){
         String resources = " ";

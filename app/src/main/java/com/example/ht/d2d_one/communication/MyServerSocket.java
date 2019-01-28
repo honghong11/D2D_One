@@ -189,19 +189,6 @@ public class MyServerSocket extends Thread{
                              * 保存此socket信息
                              */
                             BasicWifiDirectBehavior.icnOfGW.addInterGroupSocketInfo(messageFromLCGO,goSocket);
-                            //复用该Socket，讲本组主的信息发给LC组主
-//                            try{
-//                                OutputStream os = goSocket.getOutputStream();
-//                                OutputStreamWriter ow = new OutputStreamWriter(os);
-//                                BufferedWriter writer = new BufferedWriter(ow);
-//                                writer.write("111111111111");
-//                                writer.flush();
-//                                //%%%%作为内容结束的标志。
-//                                //bufferedWriter.write(content+"-"+"%%%%");
-//                                Log.d("复用Socket写完成","复用写完成啦啦啦");
-//                            }catch(IOException e){
-//                                e.printStackTrace();
-//                            }
                         }
                     }
                 }
