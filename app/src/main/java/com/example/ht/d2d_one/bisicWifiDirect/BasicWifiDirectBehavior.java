@@ -29,6 +29,7 @@ import android.widget.TextView;
 
 import com.example.ht.d2d_one.R;
 import com.example.ht.d2d_one.communication.ClientSocket;
+import com.example.ht.d2d_one.communication.MyMulticastSocketThread;
 import com.example.ht.d2d_one.communication.MyServerSocket;
 import com.example.ht.d2d_one.icn.CacheInformation;
 import com.example.ht.d2d_one.icn.DoubleLinkedList;
@@ -44,6 +45,7 @@ import com.example.ht.d2d_one.util.FindResources;
 import com.example.ht.d2d_one.util.GetIpAddrInP2pGroup;
 import com.example.ht.d2d_one.util.WifiDeviceWithLabel;
 
+import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -66,18 +68,19 @@ public class BasicWifiDirectBehavior extends ListFragment implements WifiP2pMana
     View mContentView = null;
     ProgressDialog processDialog =null;
     //icnOfnode三种节点形式
+    //GO
     private static Map<String,Socket> ISI = new HashMap<>();
     private static DoubleLinkedList goCacheRecommend = new DoubleLinkedList();
     private static LRUCache goStorageCache = new LRUCache(30);
     private static Map<String,String> RN = new HashMap<>();
     private static Map<String,String > GM = new HashMap<>();
-    private static List<Map<String,List<String>>> QR = new ArrayList<>();
+    private static List<Map<String,String>> QR = new ArrayList<>();
     private static CacheInformation goCacheInformation = new CacheInformation(goCacheRecommend,goStorageCache);
     public static CacheInformation getGoCacheInformation() {
         return goCacheInformation;
     }
     public static IcnOfNode icnOfGO = new IcnOfNode(ISI,RN,QR,GM,goCacheInformation,"kong");
-
+    //GM
     private static DoubleLinkedList gmCacheRecommend = new DoubleLinkedList();
     private static LRUCache gmStorageCache = new LRUCache(15);
     public static CacheInformation getGmCacheInformation() {
@@ -85,11 +88,12 @@ public class BasicWifiDirectBehavior extends ListFragment implements WifiP2pMana
     }
     private static CacheInformation gmCacheInformation = new CacheInformation(gmCacheRecommend,gmStorageCache);
     public static IcnOfNode icnOfGM = new IcnOfNode(gmCacheInformation,"kong");
-
+    //GW
+    private static Map<String,List<String>> GOT = new HashMap<>();
     private static DoubleLinkedList gwCacheRecommend = new DoubleLinkedList();
     private static LRUCache gwStorageCache = new LRUCache(15);
     private static CacheInformation gwCacheInformation = new CacheInformation(gwCacheRecommend,gwStorageCache);
-    public static IcnOfNode icnOfGW = new IcnOfNode(ISI,gwCacheInformation,"kong",false);
+    public static IcnOfNode icnOfGW = new IcnOfNode(GOT,ISI,gwCacheInformation,"kong",false);
 
     private WifiManager wifiManager;
     private final static int IS_RESOURCE = 1 ;
@@ -164,50 +168,24 @@ public class BasicWifiDirectBehavior extends ListFragment implements WifiP2pMana
             public void onClick(View v) {
                 //组员在断开连接后，对组员进行管理
                 if(!isGO){
-                    //向组主发送离开请求，得到回复才能断开连接
                     if(isGW){
-                        //更新cs表格和GW表格,清除ISI表
                         /**
+                         * TODO 关闭相关服务线程，
+                         * 清除相关流表
                          * 清除本网关节点的流表：ISI和cache
                          * 更新p2p组主的网关节点表，RN表
                          * 更新wifi组主的网关节点表，RN表
                          * 断开WiFi
                          */
                         GMServer.close();
-                        icnOfGM.destroyInterGroupSocketInfo();
-                        new ClientSocket("192.168.49.1",30000,"write","leave"+"-"+mWifiP2pDevice.deviceAddress+"-"+
-                                messageHandler.lcGOMAC).start();
-                        Log.d("网关节点告知p2p组主","离开p2p组主");
-
-                        Socket socket = icnOfGW.getISI().get("2");
-                        SocketReuse socketReuse = new SocketReuse(socket,"write",GetIpAddrInP2pGroup.getWlanMac()+"+"+"leave");
-                        socketReuse.start();
-                        Log.d("网关节点离开LC组主","离开LC组主");
-
+                        icnOfGW.destoryROT(icnOfGW.getGOT());
+                        icnOfGW.destroyInterGroupSocketInfo();
                         wifiManager.removeNetwork(messageHandler.netID);
                         Log.d("组员设备断开WiFi","wifi断开啦啦啦啦啦");
                     }else{
-                        new ClientSocket("192.168.49.1",30000,"write","leave"+"-"+mWifiP2pDevice.deviceAddress).start();
-                        Log.d("组员节点告知p2p组主","离开p2p组主");
+                        icnOfGM.destroyInterGroupSocketInfo();
                     }
-//                    new MyServerSocket(mWifiP2pDevice.deviceAddress,30004,"read","leave");
-//                    //这一秒的断开延时不好，如果没有效用，就在子线程中修改！！！！！
-//                    new Thread() {
-//                        @Override
-//                        public void run() {
-//                            super.run();
-//                            try{
-//                                Thread.sleep(1000);
-//                                if(messageHandler.disconnectResult.equals("allowed")){
-//                                    firstInterGroup = true;
-//                                    countOfFindResouce = 0;
-//                                    Log.d("组员设备断开","断开啦哈哈哈哈哈");
-//                                }
-//                            }catch(InterruptedException e){
-//                                e.printStackTrace();
-//                            }
-//                        }
-//                    };
+
                     firstInterGroup = true;
                     countOfFindResouce = 0;
                 }
@@ -304,7 +282,7 @@ public class BasicWifiDirectBehavior extends ListFragment implements WifiP2pMana
                  */
                 MultiCast multiCast = new MultiCast(40001,"recv","239.1.2.4");
                 multiCast.start();
-                Log.d("开启组间组播接听","组间组播开始接收信息了!!!");
+                Log.d("开启组间组播接听","组间组播开始接收信息了RR转发");
                 alreadyBeginInterGroupMultiRecv = true;
             }
         }
@@ -627,32 +605,16 @@ public class BasicWifiDirectBehavior extends ListFragment implements WifiP2pMana
                             socketReuse.start();
                             Log.d("网关节点发送资源名称到LC组主","资源名称写到LC组主成功");
                         }
-/**
- * 这一部分通过在onGroupInfoAvailable中调用unicastToGWS方法实现
- * 通过在onGruopInfoAvailable中调用方法可以避免arp表中尚未有数据的情况
- */
-//                        if(isGO){
-//                            if(macOfGWs!=null){
-//                                Log.d("LC组主的网关信息",macOfGWs);
-//                                String  [] macsOfGWs = macOfGWs.split("\\+");
-//                                for(int i =0;i<macsOfGWs.length;i++){
-//                                    String IP = GetIpAddrInP2pGroup.getGWWlanIP(macsOfGWs[i]);
-//                                    UnicastClient unicastClient = new UnicastClient(IP,50004,"write",mWifiP2pDevice.deviceAddress);
-//                                    unicastClient.start();
-//                                    Log.d("LC组主发送组间单播成功",mWifiP2pDevice.deviceAddress);
-//                                }
-//                                macOfGWs = null;
-//                            }
-//                        }
                     }
                 }
             });
             /**
-             * toBeGateway 按钮中的事件包括4个：
+             * toBeGateway 按钮中的事件包括5个：
              * 1、与组主进行信息交互，将自身周围的组主信息发送给当前组主；2、组主将判断后的信息发送给组员 3、根据收到的信息建立LC连接
              * 所以既需要给组主发送消息，又需要接收组主返回的推荐信息，所以，点击toBeGateway 时要开启组员设备的服务端socket
              * 在增加一个事件，4、成为网关节点时，开启一个组间的TCP服务端，接收来自LC组主的单播，与LC组主建立一个Socket连接
-             * 同时，对于相关的组主节点和LC组主节点需要更新网关信息表
+             * 同时，对于相关的组主节点和LC组主节点需要更新网关信息表；5、开启组内组播接收和组间组播接收，用来接收组主节点连接信息更新后，网
+             * 关节点所发出的变化性消息，以及组主节点由于网关节点新增所引起变化性消息激发所发出的自身连接信息的接收。
              */
             mContentView.findViewById(R.id.toBeGateway).setOnClickListener(new View.OnClickListener(){
                 String temp = "";
@@ -671,13 +633,21 @@ public class BasicWifiDirectBehavior extends ListFragment implements WifiP2pMana
                         Log.d("附近组主信息----",temp);
                         gmSocket = new ClientSocket("192.168.49.1",30000,"write","toBeGateway"+"+"+mWifiP2pDevice.deviceAddress+"+"+temp);
                         gmSocket.start();
-                        GMServer = new MyServerSocket(wifiManager,ePeers,mWifiP2pDevice.deviceAddress,30002,"read", "GW");
+                        GMServer = new MyServerSocket(goMAC,wifiManager,ePeers,mWifiP2pDevice.deviceAddress,30002,"read", "GW");
                         GMServer.start();
                         isGW = true;
                     }
-                    //网关节点于LC组主的第一次socket通信
+                    //网关节点与LC组主的第一次socket通信
                     UnicastSever unicastSever = new UnicastSever(goMAC,mWifiP2pDevice.deviceAddress,50004,"read");
                     unicastSever.start();
+                    //网关节点(p2p口)开启组内组播监听--这里使用组播，可能回有不可靠的情况存在，可以考虑组主轮询发送TCP，或者是可靠UDP 组内组播，接收端口号 50000 地址是239.2.1.2
+                    MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(goMAC,mWifiP2pDevice.deviceAddress,50000,"recv","239.2.1.2",
+                            GetIpAddrInP2pGroup.getLocalIPAddress(),GetIpAddrInP2pGroup.getGWWlanIP(GetIpAddrInP2pGroup.getWlanMac()),0,false);
+                    myMulticastSocketThread.start();
+                    //网关节点(wlan口)开启组间组播监听--这里使用组播，可能回有不可靠的情况存在，可以考虑组主轮询发送TCP，或者是可靠UDP，这里是监听LC组主传来的信息 组间组播 接收端口号50000 地址是239.2.1.2
+                    MyMulticastSocketThread myMulticastSocketThread1 = new MyMulticastSocketThread(goMAC,GetIpAddrInP2pGroup.getWlanMac(),50000,"recv","239.2.1.2",
+                            GetIpAddrInP2pGroup.getGWWlanIP(GetIpAddrInP2pGroup.getWlanMac()),GetIpAddrInP2pGroup.getLocalIPAddress(),1,false);
+                    myMulticastSocketThread1.start();
                 }
             });
         }
@@ -715,6 +685,9 @@ public class BasicWifiDirectBehavior extends ListFragment implements WifiP2pMana
         Log.d("DEVICE---------",device.toString());
         //这个device是组主，可以获取相关的组信息吗？
         ((DeviceActionListener)getActivity()).connect(wifiP2pConfig,device);
+        //开启一个服务端线程，针对当前节点（GM或者GW）开始回溯数据或者接收回溯的数据
+        MyServerSocket myServerSocket = new MyServerSocket(60006,"read","dataBack",mWifiP2pDevice.deviceAddress);
+        myServerSocket.start();
     }
 
 
@@ -737,6 +710,7 @@ public class BasicWifiDirectBehavior extends ListFragment implements WifiP2pMana
     }
     @Override
     //网关节点通过Wifi连接到LC组主后，也会触发该方法，通过该方法LC组主可以在连接后拿到网关节点的MAC地址
+    //当组内设备离开，组主节点可以通过该方法得知，并对CS表进行更新以及组主节点表的更新
     public void onGroupInfoAvailable(WifiP2pGroup group){
         //macOfGWs是局部变量，每次调用onGroupInfoAvailable方法，macOfGWs都是新的值
         String macOfGWs = null;
@@ -748,6 +722,10 @@ public class BasicWifiDirectBehavior extends ListFragment implements WifiP2pMana
                 ((MainActivity)getActivity()).publishService(label);
                 Log.d(MainActivity.TRG,"调用publishService函数成功啦啦啦啦啦啦啦啦啦"+label);
                 isPublished = true;
+                //组主开启一个组播接收端，接收来自网关节点关于组主连接信息的转发
+                MultiCast multiCast = new MultiCast(50005,"recv","239.2.1.3");
+                Log.d("组主开启组播监听","组主开始组播监听了ROT维持");
+                multiCast.start();
             }
         }
         String aimMac = null;
@@ -760,14 +738,31 @@ public class BasicWifiDirectBehavior extends ListFragment implements WifiP2pMana
                         if(clientMacList.get(j)!=d.deviceAddress){
                             aimMac = clientMacList.get(j);
                             Log.d("离开本组的设备mac地址：",aimMac);
-                            //从messageHandler.allMacToDevice中删去aimMac,并删去四个list中对应的信息
+                            //设备离开时，更新RN资源表
                             messageHandler.macOfAll.remove(aimMac);
                             messageHandler.movieMap.remove(aimMac);
                             messageHandler.musicMap.remove(aimMac);
                             messageHandler.packageMap.remove(aimMac);
                             messageHandler.wordMap.remove(aimMac);
                             Log.d("当前时刻的电影资源信息",messageHandler.movieMap.toString());
-
+                            //如果是网关节点，则更新组主节点的网关节点表
+                            String lcGOMac = null;
+                            if(BasicWifiDirectBehavior.icnOfGO.getGM().containsKey(aimMac)){
+                                lcGOMac = BasicWifiDirectBehavior.icnOfGO.getGM().get(aimMac);
+                                GateWay gateWay = new GateWay(aimMac,mWifiP2pDevice.deviceAddress);
+                                BasicWifiDirectBehavior.icnOfGO.updateGMTable(gateWay);
+                                try{
+                                    if(icnOfGO.getISI().get(aimMac)!=null){
+                                        icnOfGO.getISI().get(aimMac).close();
+                                    }
+                                }catch (IOException e){
+                                    e.printStackTrace();
+                                }
+                            }
+                            //将变化的信息转发给组主所连接的网关节点
+                            String changedGMTContent = mWifiP2pDevice.deviceAddress+"-"+lcGOMac+"-"+"info"+"gwLeave";
+                            MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50000,"send","239.2.1.2",changedGMTContent);
+                            myMulticastSocketThread.start();
                         }
                     }
                 }
@@ -831,15 +826,23 @@ public class BasicWifiDirectBehavior extends ListFragment implements WifiP2pMana
     private void unicastToGWS(String macOfGWs){
         if(macOfGWs!=null){
             Log.d("LC组主的网关信息",macOfGWs);
-            try{
-                Thread.sleep(1000);
-            }catch(InterruptedException e){
-                e.printStackTrace();
-            }
             String  [] macsOfGWs = macOfGWs.split("\\+");
             //为新的网关节点建立socket，需要过滤掉老的
             for(int i =0;i<macsOfGWs.length;i++){
                 String IP = GetIpAddrInP2pGroup.getGWWlanIP(macsOfGWs[i]);
+                while(true){
+                    if(IP.equals("11")){
+                        try{
+                            Thread thread = new Thread();
+                            thread.sleep(1000);
+                        }catch(InterruptedException e){
+                            e.printStackTrace();
+                        }
+                        IP = GetIpAddrInP2pGroup.getGWWlanIP(macsOfGWs[i]);
+                    }else{
+                        break;
+                    }
+                }
                 UnicastClient unicastClient = new UnicastClient(IP,50004,"write",mWifiP2pDevice.deviceAddress);
                 unicastClient.start();
                 Log.d("LC组主发送组间单播成功",IP);

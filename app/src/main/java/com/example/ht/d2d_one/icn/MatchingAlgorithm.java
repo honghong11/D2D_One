@@ -17,8 +17,8 @@ public class MatchingAlgorithm {
     /**
      *基于字符串匹配的匹配算法
      * @param qurryName 目标字符串
-     * @param qurrySetMap 查找集合 map类型 比如在DeviceListFragment中定义的 qurryMovieMap
-     * @return 返回查询列表
+     * @param qurrySetMap 查找集合 map类型 比如在DeviceListFragment中定义的 qurryMovieMap  mac+path name， mac+path name ...
+     * @return 返回查询列表 第一个字符串是设备MAC地址+资源路径，第二个是资源名称
      */
     public Map<String,String> matchingCharacterAlgorithm(String qurryName,Map<String,String> qurrySetMap){
         Map<String,String> resultMap = new HashMap<>();

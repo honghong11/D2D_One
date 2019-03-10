@@ -20,6 +20,13 @@
             android:id = "@+id/test"
             android:layout_height="wrap_content"
             android:text="通信测试" />
+        <!--当查询命中的时候，显示该按钮-->
+        <Button
+            android:layout_width="wrap_content"
+            android:id = "@+id/transfer"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:text="文件传输" />
     </LinearLayout>
    <TextView
      android:text="查找资源："

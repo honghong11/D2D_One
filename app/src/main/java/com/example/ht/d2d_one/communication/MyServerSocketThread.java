@@ -1,6 +1,8 @@
 package com.example.ht.d2d_one.communication;
 
+import android.os.Handler;
 import android.os.Message;
+import android.transition.CircularPropagation;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -10,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +27,7 @@ import com.example.ht.d2d_one.icn.MatchingAlgorithm;
 import com.example.ht.d2d_one.icn.ResourceRequestPacket;
 import com.example.ht.d2d_one.interGroupCommunication.GateWay;
 import com.example.ht.d2d_one.interGroupCommunication.MultiCast;
+import com.example.ht.d2d_one.util.GetIpAddrInP2pGroup;
 
 import static com.example.ht.d2d_one.bisicWifiDirect.BasicWifiDirectBehavior.messageHandler;
 
@@ -46,12 +50,13 @@ public class MyServerSocketThread implements Runnable{
     public void setLabel(String label) {
         this.label = label;
     }
+    //MAC 本机的MAC地址
     private String MAC = null;
     private String label = null;
     private String aimLCGo;
     private int RRTTL = 8;
     private String RRMAC = "";
-    private List<String> pathInfo = new ArrayList<>();
+    private String pathInfo = null;
     private String tag = "";
     private String resourceName = "";
     private String typeOfResourceName = "";
@@ -76,6 +81,7 @@ public class MyServerSocketThread implements Runnable{
         this.MAC = MAC;
     }
 
+    public MyServerSocketThread(){}
     public MyServerSocketThread(String MAC, Socket socket, String label, int num){
         this.socket = socket;
         this.MAC = MAC;
@@ -103,10 +109,11 @@ public class MyServerSocketThread implements Runnable{
                 if(messageFromClient[0].equals("true")){
                     resourceRequestPacket.TTL = Integer.valueOf(messageFromClient[1]);
                     resourceRequestPacket.MACOfRRN = messageFromClient[2];
-                    String[] path = messageFromClient[3].split(",");
-                    for(int i =0;i<path.length;i++){
-                        resourceRequestPacket.PathInfo.add(path[i]);
-                    }
+//                    String[] path = messageFromClient[3].split(",");
+//                    for(int i =0;i<path.length;i++){
+//                        resourceRequestPacket.PathInfo.add(path[i]);
+//                    }
+                    resourceRequestPacket.PathInfo = messageFromClient[3];
                     resourceRequestPacket.TAG = messageFromClient[4];
                     resourceRequestPacket.ResourceName = messageFromClient[5];
                     resourceRequestPacket.TypeOfResourceName = messageFromClient[6];
@@ -139,15 +146,13 @@ public class MyServerSocketThread implements Runnable{
                                         }
                                     }else{
                                         dataToBack = "没有查询到信息";
-                                        /**
-                                         * 更新cacheRecommend,更新RR（TTL减一），组播转发到网关节点（根据最小原则选择网关节点）
-                                         */
+                                        //更新cacheRecommend,更新RR（TTL减一），组播转发到网关节点（根据最小原则选择网关节点）
                                         if(messageFromClient[5]!=null&&messageFromClient[6]!=null){
                                             updateCacheTable(messageFromClient[5],messageFromClient[6]);
                                         }
-                                        Log.d("到这里了","哈哈哈哈");
                                         intraGroupMulticasatForward();
                                     }
+                                    socket.close();
                                     break;
                                 case "music":
                                     matchingAlgorithm = new MatchingAlgorithm(qurryName,messageHandler.getQurryMusicMap());
@@ -222,8 +227,9 @@ public class MyServerSocketThread implements Runnable{
                     }
                 }
                 /**
-                 * 若第一个部分为toBeGateway，表示组主收到的是组员成网关节点的信息，通过查看网关节点信息表，决定该节点与那个组主建立LC连接
-                 * 网关节点列表存放在IcnOfGO的GM中
+                 * 1若第一个部分为toBeGateway，表示组主收到的是组员成网关节点的信息，通过查看网关节点信息表，决定该节点与那个组主建立LC连接
+                 * 网关节点列表存放在IcnOfGO的GM中；2、更新网关节点表，并将该新增或者删去的网关节点所带来的组主新连接向本组主的所有网关节点通过
+                 * 组播的方式发送出去，如果是网关节点的新增，则带上gwAdd的标记（对于网关节点的离开，不会激发组主节点发送自己的连接信息）。
                  */
                 else if(messageFromClient[0].equals("toBeGateway")){
                     // GMF 本组的网关节点信息
@@ -250,21 +256,33 @@ public class MyServerSocketThread implements Runnable{
                         GateWay gateWay = new GateWay(macOfGM,MAC);
                         BasicWifiDirectBehavior.icnOfGO.addGMTable(gateWay,aimLCGo);
                         socket.close();
+                        String gwMacs = BasicWifiDirectBehavior.icnOfGO.getGWs(BasicWifiDirectBehavior.icnOfGO.getGM(),macOfGM);
+                        String changedGMTContent = MAC+"-"+aimLCGo+"-"+"info"+"-"+"gwAdd"+"-"+"0"+gwMacs;
+//                        try{
+//                            Thread thread = new Thread();
+//                            thread.sleep(15000);//12000
+//                        }catch(InterruptedException e){
+//                            e.printStackTrace();
+//                        }
+                        //开启组内组播 通过网关节点通知组主,使用使用组播地址为239.2.1.2，端口号是50000，组主的连接信息的发送都要加一个info在第一个+之后
+                        MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50000,"send","239.2.1.2",changedGMTContent);
+                        myMulticastSocketThread.start();
+                        try{
+                            Thread thread = new Thread();
+                            thread.sleep(10000);//5000
+                        }catch(InterruptedException e){
+                            e.printStackTrace();
+                        }
+                        //开启组播，将自己的连接信息，应该转发的跳数以及剩余TTL转发给所有网关节点（因为这里是开始，没有input的网关节点）
+                        // 格式为：TTL-1(应该转发的跳数)-1(当前剩余的跳数)-thisMAC-MAC1-MAC2...起始状态为TTL-1-1-thisMAC-MAC1-MAC2...向所有的网关节点转发
+                        String addInfoOne = "TTL-1-1";
+                        String connectInfo = addInfoOne+"-"+BasicWifiDirectBehavior.icnOfGO.getAllGOConInfo(BasicWifiDirectBehavior.icnOfGO.getGM());
+                        MyMulticastSocketThread myMulticastSocketThread1 = new MyMulticastSocketThread(50000,"send","239.2.1.2",connectInfo);
+                        myMulticastSocketThread1.start();
+                        Log.d("第一次非变化性消息","coming!!");
                     }
                 }else if(messageFromClient[0].equals("leave")){
-                    if(messageFromClient[2]!=null){
-                        //表示该节点是网关节点,更新GM表
-                        GateWay gateWay1 = new GateWay(messageFromClient[1],messageFromClient[2]);
-                        BasicWifiDirectBehavior.icnOfGO.updateGMTable(gateWay1);
-                    }
-                    //普通设备离开，更新cs
-                    messageHandler.getMovieMap().remove(messageFromClient[1]);
-                    messageHandler.getMusicMap().remove(messageFromClient[1]);
-                    messageHandler.getPackageMap().remove(messageFromClient[1]);
-                    messageHandler.getWordMap().remove(messageFromClient[1]);
-                    //开启一个客户端，返回处理信息，允许设备离开
-                    new ClientSocket(clientIpAddrss,30004,"write","allowed").start();
-                    socket.close();
+                    //这里不需要有操作了 2019-3-5
                 }
                 //组主设备接收来自组员设备的资源名称信息
                 else if(messageFromClient[0].equals("source")){
@@ -279,6 +297,31 @@ public class MyServerSocketThread implements Runnable{
                     //MyServerSocket.handlerMyServerSocket.sendMessage(message);
                     messageHandler.sendMessage(message);
                     socket.close();
+                }else if(messageFromClient[3].equals("dataBack")){
+                    //TODO 当数据回溯时，需要更新ICN流表
+                    String []pathInfos = messageFromClient[1].split(",");
+                    String ipOfRRN = null,ipOfNextHop = null;
+                    if(pathInfos.length-Integer.parseInt(messageFromClient[4])==0){
+                        ipOfRRN = GetIpAddrInP2pGroup.getIPFromMac(messageFromClient[0]);
+                        getResource = getResource+"+"+ipOfRRN;
+                        if(ipOfRRN!=null){
+                            Log.d("ipOfRRN的信息",ipOfRRN);
+                        }
+                        ClientSocket clientSocket = new ClientSocket(ipOfRRN,60006,"write",getResource);
+                        clientSocket.start();
+                    }else{
+                        getResource = messageFromClient[0]+"+"+messageFromClient[1]+"+"+messageFromClient[2]+"+"+messageFromClient[3]
+                                +"+"+String.valueOf(Integer.parseInt(messageFromClient[4])+1)+"+"+messageFromClient[5];
+                        String macOfNextHop = pathInfos[pathInfos.length-1-Integer.parseInt(messageFromClient[4])].split("-")[1];
+                        ipOfNextHop = GetIpAddrInP2pGroup.getIPFromMac(macOfNextHop);
+                        getResource = getResource+"+"+ipOfNextHop;
+                        if(ipOfNextHop!=null){
+                            Log.d("ipOfNextHop的信息",ipOfNextHop);
+                            //F4:F5:DB:01:91:44
+                        }
+                        ClientSocket clientSocket = new ClientSocket(ipOfNextHop,60006,"write",getResource);
+                        clientSocket.start();
+                    }
                 }
             }else if(label.equals("write")){
                 //首先获取资源，字符串类型,然后调用write方法
@@ -287,6 +330,33 @@ public class MyServerSocketThread implements Runnable{
             }
         }catch (IOException e){
             e.printStackTrace();
+        }
+    }
+    /**
+     * 循环发送网关节点表的进程，这个过程组播组地址为 239.1.2.7
+     * 发送的内容结构为：MACGOA-MACGOB-MACGOC-MACGOD...，这个内容需要对GM进行一步的抽取
+     */
+    class CircleMultiCastGWTInfo implements Runnable{
+        String content;
+        public CircleMultiCastGWTInfo(String macOfThisGO){
+            content = macOfThisGO;
+        }
+        @Override
+        public void run() {
+            try{
+                while(true){
+                    Collection<String> LCGOs = BasicWifiDirectBehavior.icnOfGO.getGM().values();
+                    for(String str:LCGOs){
+                        content = content+"-"+str;
+                    }
+                    MyMulticastSocketThread multicastSocketThread = new MyMulticastSocketThread
+                            (40000,"send","239.1.2.7",content);
+                    //每隔10s钟组播一次
+                    Thread.sleep(10000);
+                }
+            }catch (InterruptedException e){
+                e.printStackTrace();
+            }
         }
     }
     /**
@@ -343,11 +413,12 @@ public class MyServerSocketThread implements Runnable{
 
     /**
      * 对于组内的查询，不论是否查询成功，都记录到CacheRecommend 中
+     * pathinfo 为空表示是本组的查询
      * @param resourcename  查询名称
      * @param resourcetype  查询信息的类型
      */
     private void updateCacheTable(String resourcename,String resourcetype){
-        if(resourceRequestPacket.PathInfo.size()==0){
+        if(resourceRequestPacket.PathInfo == null){
             BasicWifiDirectBehavior.getGoCacheInformation().addCacheRecommend(System.currentTimeMillis(),resourcename+"+"+resourcetype);
         }
     }

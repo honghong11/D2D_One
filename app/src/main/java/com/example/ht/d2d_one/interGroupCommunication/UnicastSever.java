@@ -12,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 
 public class UnicastSever extends Thread{
     private int port;
@@ -52,18 +53,22 @@ public class UnicastSever extends Thread{
                     String info = "";
                     while (true){
                         try{
+                            if(socket.isClosed()){
+                                break;
+                            }
                             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                             info = bufferedReader.readLine();
-                            Log.d("收到来自LC组主节点的单播消息2",info);
+                            //Log.d("收到来自LC组主节点的单播消息2",info);
                             if(info.equals("data")){
-                                // TODO: 2019/1/21 关于数据包回溯的工作
-
+                                // TODO: 2019/1/21 关于数据包回溯的工作 组主到网关之间的数据传输不用复用socket了，可以正常使用socket
                             }
-                        }catch (IOException e){
+                        }catch (SocketException e){
+                            System.out.print("UnicastServer异常");
                             e.printStackTrace();
                         }
                     }
                 }
+                break;
             }
         }catch (IOException e){
             e.printStackTrace();

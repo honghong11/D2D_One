@@ -20,19 +20,19 @@
             android:layout_width="wrap_content"
             android:id="@+id/intraGroupMultiCastSending"
             android:layout_gravity="center"
-            android:text="组内组播发送"/>
+            android:text="p2pmultiCastSend"/>
         <Button
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
             android:id="@+id/intraGroupMultiCastReceive"
             android:layout_gravity="center"
-            android:text="组内组播接收"/>
+            android:text="p2pmultiCastRecv"/>
         <Button
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
             android:id="@+id/interGroupMultiCastSending"
             android:layout_gravity="center"
-            android:text="组间组播发送"/>
+            android:text="wlan0multiCastSend"/>
         <Button
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
@@ -42,9 +42,9 @@
         <Button
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
-            android:id="@+id/GWMultiSending"
+            android:id="@+id/MultiSending"
             android:layout_gravity="center"
-            android:text="网关wlan组播发送"/>
+            android:text="不指定网卡发送组播"/>
         <Button
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"

@@ -1,14 +1,21 @@
 package com.example.ht.d2d_one.communication;
 
+import android.content.Intent;
 import android.util.Log;
 
 import com.example.ht.d2d_one.bisicWifiDirect.BasicWifiDirectBehavior;
 import com.example.ht.d2d_one.icn.ResourceRequestPacket;
+import com.example.ht.d2d_one.util.FileTransfer;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -22,10 +29,11 @@ public class ClientSocket extends Thread {
     private int port;
     private int RRTTL = 8;
     private String RRMAC;
-    private List<String> pathInfo = new ArrayList<>();
+    private String pathInfo;
     private String tag;
     private String resourceName;
     private String typeOfResourcename;
+    private FileTransfer fileTransfer;
     private ResourceRequestPacket resourceRequestPacket = new ResourceRequestPacket(RRTTL,RRMAC,pathInfo,resourceName,typeOfResourcename);
 
     public String getContent() {
@@ -42,6 +50,12 @@ public class ClientSocket extends Thread {
         this.port = port;
         this.label = label;
         this.content = content;
+    }
+    public ClientSocket(String host,int port,String label,FileTransfer fileTransfer){
+        this.host = host;
+        this.port = port;
+        this.label = label;
+        this.fileTransfer = fileTransfer;
     }
     public ClientSocket(String host,int port,String label,String tag,String content){
         this.host = host;
@@ -77,6 +91,10 @@ public class ClientSocket extends Thread {
                 write(socket,content);
                 socket.close();
                 Log.d("客户端写完毕",content);
+            }else if (label.equals("test")){
+                write(socket,content);
+                socket.close();
+                Log.d("ceshi!!!!!",content);
             }else if(label.equals("query")){
                 query(socket,true,content);
                 socket.close();
@@ -93,6 +111,10 @@ public class ClientSocket extends Thread {
                     }
                 }
             }
+//            else if(label.equals("transfer")){
+//                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+//                FileTransfer fileTransfer = new FileTransfer(,socket);
+//            }
         }catch (IOException e){
             e.printStackTrace();
         }
@@ -131,17 +153,28 @@ public class ClientSocket extends Thread {
             e.printStackTrace();
         }
     }
-    //使用toString 方法比较容易传递数据，暂时不使用对象传递数据
-//    public void query(Socket socket,boolean forQurry,ResourceRequestPacket resourceRequestPacket){
-//        try{
-//            resourceRequestPacket.TAG = String.valueOf(forQurry);
-//            OutputStream outputStream = socket.getOutputStream();
-//            ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-//            objectOutputStream.writeObject(resourceRequestPacket);
-//            objectOutputStream.close();
-//            Log.d("客户端查询","客户端查询成功");
-//        }catch (IOException e){
-//            e.printStackTrace();
-//        }
-//    }
+
+    public void writeFile(Socket socket,FileTransfer fileTransfer){
+        try{
+            OutputStream outputStream = socket.getOutputStream();
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+            objectOutputStream.writeObject(fileTransfer);
+            InputStream inputStream = null;
+            if(!fileTransfer.getFilePath(fileTransfer.getHead()).equals("wrong")){
+                inputStream = new FileInputStream(fileTransfer.getFilePath(fileTransfer.getHead()));
+            }
+            byte buf[] = new byte[1024];
+            int flag;
+            while((flag = inputStream.read(buf))!=-1){
+                outputStream.write(buf);
+            }
+            Log.d("这里是发送文件","发送文件成功");
+            outputStream.close();
+            objectOutputStream.close();
+            inputStream.close();
+            socket.close();
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+    }
 }

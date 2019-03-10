@@ -13,6 +13,7 @@ import com.example.ht.d2d_one.bisicWifiDirect.MainActivity;
 import com.example.ht.d2d_one.communication.ClientSocket;
 import com.example.ht.d2d_one.communication.MyMulticastSocketThread;
 import com.example.ht.d2d_one.communication.MyServerSocket;
+import com.example.ht.d2d_one.interGroupCommunication.MultiCast;
 import com.example.ht.d2d_one.interGroupCommunication.SocketReuse;
 import com.example.ht.d2d_one.interGroupCommunication.Unicast;
 import com.example.ht.d2d_one.util.GetIpAddrInP2pGroup;
@@ -43,15 +44,19 @@ public class TestPage extends Activity {
                 Log.d("p2pWifiAddr","p2pWifiAddr 为空值");
             }
         }
-        //组内组播p2p实验
+        /**
+         * 组播实验
+         */
+        //p2p组播发送
         Button button = findViewById(R.id.intraGroupMultiCastSending);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50000,"send","239.1.2.5","组内组播测试！！！");
+                MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50000,"send","239.1.2.5","p2pmultiCastTest");
                 myMulticastSocketThread.start();
             }
         });
+        //p2p组播接收
         button = findViewById(R.id.intraGroupMultiCastReceive);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -60,47 +65,51 @@ public class TestPage extends Activity {
                 myMulticastSocketThread.start();
             }
         });
-        //wlan0组播实验，组员使用wlan0接口接收组播数据
+
+        //wlan0组播发送
         button = findViewById(R.id.interGroupMultiCastSending);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50001,"send","239.1.2.6","组主p2p组播");
-                myMulticastSocketThread.start();
+//                MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50000,"send","239.1.2.5","wlan0multiCastTest");
+//                myMulticastSocketThread.start();
+                MultiCast multicast = new MultiCast(50000,"send","239.1.2.5",wlanAddr,"wlan0multiCastTest");
+                multicast.start();
             }
         });
+        //wlan0组播接收
         button = findViewById(R.id.interGroupMultiCastReceive);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50001,"recv","239.1.2.6",true,wlanAddr);
+                MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50000,"recv","239.1.2.5",true,wlanAddr);
                 myMulticastSocketThread.start();
             }
         });
-        //网关节点wlan发送组播，LC组主接收组播实验
-        button = findViewById(R.id.GWMultiSending);
+
+
+        //不绑定网卡发送组播
+        button = findViewById(R.id.MultiSending);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50002,"send","239.1.2.7","message from GW","wlan0");
-                myMulticastSocketThread.start();
+                MultiCast multiCast = new MultiCast(50000,"send","239.1.2.5","test","wlan0multiCastTest");
+                multiCast.start();
             }
         });
-        button = findViewById(R.id.GOMultiRecv);
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50002,"recv","239.1.2.7",true,"192.168.49.1");
-                myMulticastSocketThread.start();
-            }
-        });
-        //网关节点单播实验,网关发送单播，LC组主接收单播
+
+
+        /**
+         * 网关节点单播实验,网关发送单播，LC组主接收单播
+         */
         button = findViewById(R.id.interGroupGWUniCastSending);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Unicast unicast = new Unicast("192.168.49.1",50003,wlanAddr,"来自网关的单播信息","write");
-                unicast.start();
+                ClientSocket clientSocket = new ClientSocket("192.168.49.199",50003,"test","duotiao");
+                clientSocket.start();
+//                Unicast unicast = new Unicast("192.168.49.199",50003,"192.168.49.123","p2p0test","write");
+//                unicast.start();
             }
         });
         button = findViewById(R.id.interGroupGOUniCastReceive);

@@ -84,6 +84,8 @@ public class GateWay {
             List<String> aimGODevice = binaryQuery(resultMacs,nearLcGoMAC);
             if(aimGODevice.size()==1){
                 aimGO = aimGODevice.get(0);
+            }else if(aimGODevice.size()==0){
+                aimGO = nearLcGoMAC.get(0);
             }else{
                 String [] collectionOfGO = new String [aimGODevice.size()];
                 for(int i=0;i<aimGODevice.size();i++){

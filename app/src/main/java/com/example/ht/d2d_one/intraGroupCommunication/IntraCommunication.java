@@ -48,7 +48,7 @@ public class IntraCommunication extends Activity {
     //最多达到第四个组
     private int RRTTL = 8;
     private String RRMAC;
-    private List<String> pathInfo = new ArrayList<>();
+    private String pathInfo;
     private String tag;
     private String resourceName;
     private String typeOfResourceName;
@@ -178,8 +178,11 @@ public class IntraCommunication extends Activity {
                     wifiAddress = (i & 0xFF ) + "." + ((i >> 8 ) & 0xFF) + "." + ((i >> 16 ) & 0xFF) + "." + ( i >> 24 & 0xFF) ;
                     Log.d("ip地址是", wifiAddress);
                     MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread
-                            (goMAC,deviceAddress,40000,"recv","239.1.2.3",p2pIp,wifiAddress,true);
+                            (goMAC,deviceAddress,GetIpAddrInP2pGroup.getWlanMac(),40000,"recv","239.1.2.3",0,true);
                     myMulticastSocketThread.start();
+                    MyMulticastSocketThread myMulticastSocketThread1 = new MyMulticastSocketThread
+                            (goMAC,GetIpAddrInP2pGroup.getWlanMac(),deviceAddress,40000,"recv","239.1.2.3",1,true);
+                    myMulticastSocketThread1.start();
                     Log.d("开启组播接听","组播开始接收信息了!!!");
                     //根据接收到的信息，更新RR, 并向外组转发
                 }
