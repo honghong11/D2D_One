@@ -1,7 +1,15 @@
 package com.example.ht.d2d_one.test;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
+import android.net.wifi.p2p.WifiP2pConfig;
+import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pInfo;
+import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -16,8 +24,10 @@ import com.example.ht.d2d_one.communication.MyServerSocket;
 import com.example.ht.d2d_one.interGroupCommunication.MultiCast;
 import com.example.ht.d2d_one.interGroupCommunication.SocketReuse;
 import com.example.ht.d2d_one.interGroupCommunication.Unicast;
+import com.example.ht.d2d_one.util.FileTransfer;
 import com.example.ht.d2d_one.util.GetIpAddrInP2pGroup;
 
+import java.io.File;
 import java.net.Socket;
 import java.util.List;
 
@@ -147,6 +157,29 @@ public class TestPage extends Activity {
                 }
             }
         });
+        button = findViewById(R.id.fileTransfer);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                String head = "1234+22322+111+/storage/emulated/0/ScreenRecord/b.mp4+hh";
+//                FileTransfer fileTransfer = new FileTransfer(head);
+//                ClientSocket clientSocket = new ClientSocket("192.168.49.1",30003,"writeFile",fileTransfer);
+//                clientSocket.start();
+                String head = "/storage/emulated/0/ScreenRecord/h.mp4";
+                FileTransfer fileTransfer = new FileTransfer(head);
+                ClientSocket clientSocket = new ClientSocket("192.168.49.1",30003,"onlyWriteFile",fileTransfer);
+                clientSocket.start();
+            }
+        });
+//        button = findViewById(R.id.RSSI);
+//        button.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                WifiManager wifiManager = (WifiManager)getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+//                wifiManager.
+//
+//            }
+//        });
     }
     @Override
     protected void onStart(){

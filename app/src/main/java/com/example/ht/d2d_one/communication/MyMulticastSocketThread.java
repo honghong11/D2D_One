@@ -131,7 +131,16 @@ public class MyMulticastSocketThread extends Thread{
                 NetworkInterface itf = null;
                 if(isRRForward){
                     if(interfaceNum==0){
-                        itf = NetworkInterface.getByInetAddress(InetAddress.getByName(p2pIpAddr));
+                        //下面这一行是给测试用的，而在传递RR的过程中，需要使用更下面的方式
+//                        itf = NetworkInterface.getByInetAddress(InetAddress.getByName(p2pIpAddr));
+                        for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+                            itf = en.nextElement();
+                            String iface = itf.getName();
+                            if(iface.matches(".*" +"p2p0"+ ".*")||iface.matches(".*"+"p2p-wlan0-1"+".*")){
+                                break;
+                            }
+                        }
+                        Log.d("开启p2p接收","p2p");
                     }else if(interfaceNum == 1){
                         for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
                             itf = en.nextElement();
@@ -140,6 +149,7 @@ public class MyMulticastSocketThread extends Thread{
                                 break;
                             }
                         }
+                        Log.d("开启wlan接收","wlan");
                     }
                 }else{
                     if(interfaceNum == 0){
@@ -174,36 +184,6 @@ public class MyMulticastSocketThread extends Thread{
                     DatagramPacket recv = new DatagramPacket(buf,buf.length);
                     InetAddress multiGroup = createMulticastGroup(multiAddress);
                     multicastSocket.joinGroup(new InetSocketAddress(multiGroup,port),itf);
-//                    if(isRRForward){
-//                        NetworkInterface itf = NetworkInterface.getByInetAddress(InetAddress.getByName(p2pIpAddr));
-//                        multicastSocket.joinGroup(new InetSocketAddress(multiGroup,port),itf);
-//                    }else{
-//                        NetworkInterface intf = null;
-//                        if(interfaceNum == 0){
-//                            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
-//                                intf = en.nextElement();
-//                                String iface = intf.getName();
-//                                if(iface.matches(".*" +"p2p0"+ ".*")||iface.matches(".*"+"p2p-wlan0-1"+".*")){
-//                                    break;
-//                                }
-//                            }
-//                        }else{
-//                            try{
-//                                Thread thread = new Thread();
-//                                thread.sleep(6000);
-//                            }catch (InterruptedException e){
-//                                e.printStackTrace();
-//                            }
-//                            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
-//                                intf = en.nextElement();
-//                                String iface = intf.getName();
-//                                if(iface.matches(".*" +"wlan0"+ ".*")){
-//                                    break;
-//                                }
-//                            }
-//                        }
-//                        multicastSocket.joinGroup(new InetSocketAddress(multiGroup,port),intf);
-//                    }
                     //Log.d("组员设备的IP地址",p2pIpAddr);
                     //multicastSocket.setInterface(InetAddress.getByName(ipAddr));
                     //multicastSocket.joinGroup(multiGroup);
@@ -228,63 +208,66 @@ public class MyMulticastSocketThread extends Thread{
                              * 网关节点处理完接收的数据后，对于数据的gwMacs不用发给下一个组主，加上该网关节点的MAC地址，以便下一组主节点选择网关
                              */
                             if(strings.length>2){
-                                if(strings[2]!=null&&strings[2].equals("info")){
-                                    int a = Integer.parseInt(strings[4]);
-                                    a =a +1;
-                                    receiver = strings[0]+"-"+strings[1]+"-"+strings[2]+"-"+strings[3]+"-"+String.valueOf(a)+"-"+macOfThisDevice;
-                                    int num =0;
-                                    for(int i= 5;i<strings.length;i++){
-                                        if(!macOfThisDevice.equals(strings[i])){
-                                            num++;
-                                        }
-                                    }
-                                    if(num != strings.length-5){
-                                        if(strings[3]!=null){
-                                            /**
-                                             * 如果该变化性信息可以引起组主节点表的变化，更新ROT表，将该信息转发给另一个组主
-                                             * 如果该变化性信息不能引起组主节点表的变化，停止该信息的转发
-                                             */
-                                            if(BasicWifiDirectBehavior.icnOfGW.isChangGOT(BasicWifiDirectBehavior.icnOfGW.getGOT(),receiver)){
-                                                BasicWifiDirectBehavior.icnOfGW.updateGOT(BasicWifiDirectBehavior.icnOfGW.getGOT(),receiver);
-                                                /**
-                                                 * 如果是网关节点的p2p网卡收到的变化性消息，网关节点应该只将该消息转发给wlan网卡连接的组主
-                                                 * 网关节点和LC组主在物理上连接后再发送组播
-                                                 */
-                                                if(interfaceNum == 0){
-                                                    MultiCast multiCast = new MultiCast(50005,"send","239.2.1.3",wifiIP,receiver);
-                                                    multiCast.start();
-                                                }else if(interfaceNum == 1){
-                                                    MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50005,"send","239.2.1.3",receiver);
-                                                    myMulticastSocketThread.start();
-                                                }
-                                            }else{
-                                                Log.d("变化信息不引起ROT表改变，停止转发变化信息",BasicWifiDirectBehavior.icnOfGW.toString(BasicWifiDirectBehavior.icnOfGW.getGOT()));
-                                            }
-                                        }
-                                    }else{
-                                        Log.d("根据接收的消息","不允许从此节点转发");
-                                    }
-                                }else if(strings[0].equals("TTL")){
-                                    //判断组主连接情况是否会引起网关节点组主节点表的变化
-                                    //如果引起变化，则不再转发此连接情况；若不能引起变化，则继续转发,不用判断跳数（跳数的更新在组主节点处理，所以也有组主节点进行判断）
-                                    String conInfos[] = receiver.split("-");
-                                    if(BasicWifiDirectBehavior.icnOfGW.isChangedGOTByConInfo(BasicWifiDirectBehavior.icnOfGW.getGOT(),conInfos)){
-                                        BasicWifiDirectBehavior.icnOfGW.updateGOTByConInfo(BasicWifiDirectBehavior.icnOfGW.getGOT(),conInfos);
-                                        Log.d("GW停止转发组主连接信息：","因为引起了GW组主节点表的更新");
-                                        Log.d("当前组主节点表",BasicWifiDirectBehavior.icnOfGW.toString(BasicWifiDirectBehavior.icnOfGW.getGOT()));
-                                    }else{
-                                        Log.d("GW转发组主连接信息：","因为未引起了GW组主节点表的更新");
-                                        if(interfaceNum == 0){
-                                            MultiCast multiCast = new MultiCast(50005,"send","239.2.1.3",wifiIP,receiver);
-                                            multiCast.start();
-                                        }else if(interfaceNum == 1){
-                                            MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50005,"send","239.2.1.3",receiver);
-                                            myMulticastSocketThread.start();
-                                        }
-                                    }
-                                }
-                            } else{
+                                //TODO 注释GOT
+//                                if(strings[2]!=null&&strings[2].equals("info")){
+//                                    int a = Integer.parseInt(strings[4]);
+//                                    a =a +1;
+//                                    receiver = strings[0]+"-"+strings[1]+"-"+strings[2]+"-"+strings[3]+"-"+String.valueOf(a)+"-"+macOfThisDevice;
+//                                    int num =0;
+//                                    for(int i= 5;i<strings.length;i++){
+//                                        if(!macOfThisDevice.equals(strings[i])){
+//                                            num++;
+//                                        }
+//                                    }
+//                                    if(num != strings.length-5){
+//                                        if(strings[3]!=null){
+//                                            /**
+//                                             * 如果该变化性信息可以引起组主节点表的变化，更新ROT表，将该信息转发给另一个组主
+//                                             * 如果该变化性信息不能引起组主节点表的变化，停止该信息的转发
+//                                             */
+//                                            if(BasicWifiDirectBehavior.icnOfGW.isChangGOT(BasicWifiDirectBehavior.icnOfGW.getGOT(),receiver)){
+//                                                BasicWifiDirectBehavior.icnOfGW.updateGOT(BasicWifiDirectBehavior.icnOfGW.getGOT(),receiver);
+//                                                /**
+//                                                 * 如果是网关节点的p2p网卡收到的变化性消息，网关节点应该只将该消息转发给wlan网卡连接的组主
+//                                                 * 网关节点和LC组主在物理上连接后再发送组播
+//                                                 */
+//                                                if(interfaceNum == 0){
+//                                                    MultiCast multiCast = new MultiCast(50005,"send","239.2.1.3",wifiIP,receiver);
+//                                                    multiCast.start();
+//                                                }else if(interfaceNum == 1){
+//                                                    MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50005,"send","239.2.1.3",receiver);
+//                                                    myMulticastSocketThread.start();
+//                                                }
+//                                            }else{
+//                                                Log.d("变化信息不引起ROT表改变，停止转发变化信息",BasicWifiDirectBehavior.icnOfGW.toString(BasicWifiDirectBehavior.icnOfGW.getGOT()));
+//                                            }
+//                                        }
+//                                    }else{
+//                                        Log.d("根据接收的消息","不允许从此节点转发");
+//                                    }
+//                                }else if(strings[0].equals("TTL")){
+//                                    //判断组主连接情况是否会引起网关节点组主节点表的变化
+//                                    //如果引起变化，则不再转发此连接情况；若不能引起变化，则继续转发,不用判断跳数（跳数的更新在组主节点处理，所以也有组主节点进行判断）
+//                                    String conInfos[] = receiver.split("-");
+//                                    if(BasicWifiDirectBehavior.icnOfGW.isChangedGOTByConInfo(BasicWifiDirectBehavior.icnOfGW.getGOT(),conInfos)){
+//                                        BasicWifiDirectBehavior.icnOfGW.updateGOTByConInfo(BasicWifiDirectBehavior.icnOfGW.getGOT(),conInfos);
+//                                        Log.d("GW停止转发组主连接信息：","因为引起了GW组主节点表的更新");
+//                                        Log.d("当前组主节点表",BasicWifiDirectBehavior.icnOfGW.toString(BasicWifiDirectBehavior.icnOfGW.getGOT()));
+//                                    }else{
+//                                        Log.d("GW转发组主连接信息：","因为未引起了GW组主节点表的更新");
+//                                        if(interfaceNum == 0){
+//                                            MultiCast multiCast = new MultiCast(50005,"send","239.2.1.3",wifiIP,receiver);
+//                                            multiCast.start();
+//                                        }else if(interfaceNum == 1){
+//                                            MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(50005,"send","239.2.1.3",receiver);
+//                                            myMulticastSocketThread.start();
+//                                        }
+//                                    }
+//                                }
+                            }
+                            else{
                                 //处理转发的查询信息 RR
+                                //将查询记录到cache中
                                 String[] firstDealMessage = receiver.split("-");
                                 String allowedMAC = firstDealMessage[0].replace("[","").replace("]","");
                                 allowedMAC.replace(" ","");
@@ -301,17 +284,21 @@ public class MyMulticastSocketThread extends Thread{
                                         TTL = TTL-1;
                                         String path = null;
                                         if(RR[2]==null||RR[2].equals("null")){
-                                            path = goMAC+"-"+anotherMAC;
+                                            path = goMAC+"*"+anotherMAC;
                                         }else{
-                                            path = RR[2]+", "+goMAC+"-"+anotherMAC;
+                                            path = RR[2]+", "+goMAC+"*"+anotherMAC;
                                         }
                                         ResourceRequestPacket resourceRequestPacket = new ResourceRequestPacket(TTL,RR[1],path,RR[3],RR[4],RR[5]);
-                                        BasicWifiDirectBehavior.getGmCacheInformation().addCacheRecommend(System.currentTimeMillis(),RR[4]);
+                                        if(BasicWifiDirectBehavior.icnOfGW.isAddCache(RR[4]+"-"+RR[1])){
+                                            BasicWifiDirectBehavior.icnOfGW.addCache(System.currentTimeMillis(),RR[4]+"-"+RR[1]);
+                                        }
+                                        Log.d("网关节点中的cache信息",BasicWifiDirectBehavior.icnOfGW.cacheToString());
                                         if(interfaceNum==1){
                                             MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread(40001,"send","239.1.2.4",resourceRequestPacket.toString(),null);
                                             myMulticastSocketThread.start();
                                             Log.d("网关节点通过p2p网卡转发RR信息",resourceRequestPacket.toString());
                                         }else if(interfaceNum ==0){
+                                            wifiIP = "kk";
                                             MultiCast multicast = new MultiCast(40001,"send","239.1.2.4",wifiIP,resourceRequestPacket.toString());
                                             multicast.start();
                                             Log.d("网关节点通过wlan网卡转发RR信息",resourceRequestPacket.toString());

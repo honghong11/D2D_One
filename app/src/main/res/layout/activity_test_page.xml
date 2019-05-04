@@ -76,4 +76,14 @@
         android:id="@+id/interGroupGWUniCastSending"
         android:layout_gravity="center"
         android:text="组间单播发送"/>
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/fileTransfer"
+        android:text="文件传输测试"/>
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/RSSI"
+        android:text="点击查看RSSI"/>
 </LinearLayout>

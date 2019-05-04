@@ -5,6 +5,8 @@ import android.util.Log;
 import com.example.ht.d2d_one.interGroupCommunication.GateWay;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
@@ -37,24 +39,30 @@ public class IcnOfNode {
 
     private String gwMAC;
     private boolean isGW;
-    private CacheInformation cacheInformation;
+//    private CacheInformation cacheInformation;
+//    public CacheInformation getCacheInformation() {
+//        return cacheInformation;
+//    }
+
+    private Map<String,String> cache = new HashMap<>();
     private Map<String,String > GM = new LinkedHashMap<>();
     List<Map<String,String>> QR = new ArrayList<Map<String,String>>();
     private Map<String,String> RN = new HashMap<>();
-    public IcnOfNode(Map<String,Socket> ISI,Map<String,String>RN, List<Map<String,String>> QR, Map<String,String> GM, CacheInformation cacheInformation, String mac){
+    public IcnOfNode(Map<String,Socket> ISI,Map<String,String>RN, List<Map<String,String>> QR, Map<String,String> GM, Map<String,String> cache, String mac){
         this.RN = RN;
         this.QR = QR;
         this.GM = GM;
-        this.cacheInformation = cacheInformation;
+        this.cache = cache;
         this.goMAC = mac;
     }
-    public IcnOfNode(CacheInformation cacheInformation,String mac){
-        this.cacheInformation = cacheInformation;
+    public IcnOfNode(Map<String,String> cache,String mac){
+        this.cache = cache;
         this.gmMAC = mac;
     }
-    public IcnOfNode(Map<String,List<String>> got,Map<String,Socket>ISI,CacheInformation cacheInformation, String mac,boolean isGW){
+    public IcnOfNode(Map<String,ObjectOutputStream> IOOS,Map<String,List<String>> got,Map<String,Socket>ISI,Map<String,String> cache, String mac,boolean isGW){
+        this.IOOS = IOOS;
         this.ISI = ISI;
-        this.cacheInformation =cacheInformation;
+        this.cache =cache;
         this.gwMAC = mac;
         this.isGW = isGW;
     }
@@ -144,7 +152,7 @@ public class IcnOfNode {
 
     /**
      * 当GO收到查询信息resourceRequestPacket后，先进行QR表的查询,当查询到有结果则不再查询RN表，并且在QR中添加此记录
-     * 如果查询没有匹配结果，返回false去查cs
+     * 如果查询没有匹配结果，返回false去查cs，这一部分查询工作在myServerSocektThread中编写
      * @param resourceRequestPacket
      */
     public boolean queryQRTable(ResourceRequestPacket resourceRequestPacket){
@@ -155,12 +163,10 @@ public class IcnOfNode {
             Map<String,String> contentOfQR = QR.get(i);
             String key = macOfRRN+"\\+"+qurryName+"\\+"+qurryNameType;
             if(contentOfQR.get(key)!=null) {
-                addQRTable(resourceRequestPacket);
+                //将add和query分开
+//                addQRTable(resourceRequestPacket);
                 return true;
             }
-//            }else{
-//                queryRNTable(resourceRequestPacket);
-//            }
         }
         return false;
     }
@@ -255,15 +261,15 @@ public class IcnOfNode {
         for(String key: gm.keySet()){
             keys.add(key);
         }
-        for(String value:gm.values()){
-            values.add(value);
-        }
-        for(int i =0;i<values.size()-1;i++){
-            //如果前一个value和后一个value相等，对应的keys中选择靠后的一个，因为使用linkedhashmap是顺序的，靠后说明此网关节点比较新
-            if(values.get(i).equals(values.get(i+1))){
-                keys.remove(i);
-            }
-        }
+//        for(String value:gm.values()){
+//            values.add(value);
+//        }
+//        for(int i =0;i<values.size()-1;i++){
+//            //如果前一个value和后一个value相等，对应的keys中选择靠后的一个，因为使用linkedhashmap是顺序的，靠后说明此网关节点比较新
+//            if(values.get(i).equals(values.get(i+1))){
+//                keys.remove(i);
+//            }
+//        }
         return keys;
     }
     /**
@@ -289,15 +295,25 @@ public class IcnOfNode {
      * 第一个String是网关节点的mac地址
      */
     private Map<String,Socket> ISI = new HashMap<>();
+    /**
+     * IOOS用来存放该网关节点的ObjectOutputStream，因为，对于一个网关节点应该使用同一个ObjectOutputStreami写入到ObjectInputStream中。
+     */
+    private Map<String,ObjectOutputStream> IOOS = new HashMap<>();
 
     public Map<String, Socket> getISI() {
         return ISI;
     }
-
+    public Map<String,ObjectOutputStream>getIOOS(){
+        return IOOS;
+    }
     //添加一个socket，并设置该socket保持活性
     public Map<String,Socket> addInterGroupSocketInfo(String mac, Socket socket){
         ISI.put(mac,socket);
         return ISI;
+    }
+    public Map<String,ObjectOutputStream> addIOOS(String mac, ObjectOutputStream objectOutputStream){
+        IOOS.put(mac,objectOutputStream);
+        return IOOS;
     }
     //当网关节点离开或者组主离开时，关闭所有复用socket连接，并清除ISI表
     public void destroyInterGroupSocketInfo(){
@@ -486,4 +502,45 @@ public class IcnOfNode {
         }
         return result;
     }
+    public boolean isAddCache(String resourceInfo){
+        boolean result = false;
+        if(!cache.containsValue(resourceInfo)){
+            result = true;
+        }
+        return result;
+    }
+    /**
+     *简化cache机制，使用一个Map来存储请求信息
+     */
+    public void addCache(long time,String resourceInfo){
+        cache.put(String.valueOf(time),resourceInfo);
+    }
+    //根据当前回溯的数据名称判断是否cache该资源
+    public boolean isCache(String resourceInfo){
+        boolean result = false;
+        long currentTime = System.currentTimeMillis();
+        Collection<String> time = cache.keySet();
+        int count = 0;
+        for(String key:time){
+            if(resourceInfo.equals(cache.get(key).split("-")[0])){
+                count++;
+                if(count==2){
+                    if(Long.parseLong(key)+3600000>currentTime){
+                        result = true;
+                        break;
+                    }
+                }
+            }
+        }
+        return result;
+    }
+    public String cacheToString(){
+        String result = "/";
+        Collection<String> resourceName = cache.values();
+        for(String value:resourceName){
+            result = result+"+"+value;
+        }
+        return result;
+    }
 }
+

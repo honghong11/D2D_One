@@ -98,7 +98,7 @@ public class GetIpAddrInP2pGroup {
                     String device = splitted[5];
                     if (device.matches(".*" +p2pInt+ ".*")){
                         String mac = splitted[3];
-                        if (mac.matches(MAC)) {
+                        if (mac.compareToIgnoreCase(MAC)==0) {
                             return splitted[0];
                         }
                     }
