@@ -38,7 +38,7 @@ public class FindResources{
                     resourcePackges.add(file.getAbsolutePath()+"="+file.getName()+"|");
                     //resource.put("package",resourcePackges);
                 }
-                if (file.getName().endsWith(".pdf")) {
+                if (file.getName().endsWith(".txt")) {
                     resourceWords.add(file.getAbsolutePath()+"="+file.getName()+"|");
                     //resource.put("word",resourceWords);
                 }

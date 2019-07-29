@@ -16,8 +16,8 @@ public class CacheInformation {
      * CR 以后还可以添加一项RequestMac,用于以后将缓存推荐到对应的设备上
      * 目前仅根据类别进行缓存，不根据名称进行缓存
      */
-    private DoubleLinkedList cacheRecommend = new DoubleLinkedList();
-    private LRUCache storageCache = new LRUCache(CAPACITY);
+    private DoubleLinkedList cacheRecommend;
+    private LRUCache storageCache;
     public CacheInformation(DoubleLinkedList cacheRecommend,LRUCache storageCache){
         this.cacheRecommend = cacheRecommend;
         this.storageCache = storageCache;
@@ -25,6 +25,8 @@ public class CacheInformation {
     /**
      * @param time 当前时刻
      * @param name name的格式为: 资源名称+资源类型
+     *             cacheThisResource()方法根据时间对资源类型加权，根据资源类型判断是否缓存
+     *             cacheThisResourceSecond()方法，当一小时内已存在两次同样的请求，若得到该资源，则缓存
      */
     public DoubleLinkedList addCacheRecommend(Long time,String name){
         String currentTime = time.toString();
@@ -34,7 +36,7 @@ public class CacheInformation {
     /**
      * 我们认为只有一个小时内的记录才有意义。如果最近一个小时内没有记录，不缓存，清除CR表。只保留CR表当前时刻的一小时之内的记录，
      */
-    private void updateCacheRecommend(DoubleLinkedList doubleLinkedList){
+    public void updateCacheRecommend(DoubleLinkedList doubleLinkedList){
         Long time = System.currentTimeMillis();
         time = time - 3600000;
         String limitationTime = time.toString();
@@ -59,7 +61,7 @@ public class CacheInformation {
      * @param resourceBackPacket 返回的数据包
      * @return 是否缓存该数据
      */
-    private boolean cacheThisResource(ResourceBackPacket resourceBackPacket){
+    public boolean cacheThisResource(ResourceBackPacket resourceBackPacket){
         updateCacheRecommend(cacheRecommend);
         Long time = System.currentTimeMillis();
         double rateOfCurrentResource =0;
@@ -157,6 +159,30 @@ public class CacheInformation {
         }
         return cacheResult;
     }
+
+    /**
+     * 加一个新的cache的条件
+     * 当一小时内CR表中有两项与当前回溯的资源重名，则cache此资源
+     * @param resourceName 格式为：xx.mp3带后缀
+     */
+    public boolean cacheThisSourceSceond(String resourceName){
+        boolean result = false;
+        updateCacheRecommend(cacheRecommend);
+        DoubleLinkedList.Node tempNode = cacheRecommend.head.next;
+        int count = 0;
+        while (tempNode.next!=cacheRecommend.head){
+            String [] sourceInfo = cacheRecommend.head.value.split("//+");
+            if(resourceName.equals(sourceInfo[0])){
+                count++;
+                if(count == 2){
+                    result = true;
+                    break;
+                }
+            }
+            tempNode = tempNode.next;
+        }
+        return result;
+    }
     /**
      * 这个方法是在socket接收数据时调用
      * 如果推荐缓存此项目，首先要选择存储路径（目前是存放在组主节点），然后放入SC表中。
@@ -173,6 +199,16 @@ public class CacheInformation {
              storageCache.put(resourceBackPacket.ResourceName[0]+"."+resourceBackPacket.ResourceName[1],
                      resourceBackPacket.PathInfo.toString());
          }
+    }
+
+    //将cacheRecommend中的内容转换为String
+    public String toString(){
+        String result = "/";
+        DoubleLinkedList.Node tmpNode = cacheRecommend.head;
+        while(tmpNode.next!=cacheRecommend.head){
+            result = result +tmpNode.value+"/";
+        }
+        return result;
     }
 //    //LRU 缓存的数据，顺序不是插入的顺序而是访问的数据
 //    class LRUCache extends LinkedHashMap<String,String>{

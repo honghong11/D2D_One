@@ -25,13 +25,21 @@ import com.example.ht.d2d_one.bisicWifiDirect.BasicWifiDirectBehavior;
 import com.example.ht.d2d_one.communication.ClientSocket;
 import com.example.ht.d2d_one.communication.MyMulticastSocketThread;
 import com.example.ht.d2d_one.communication.MyServerSocket;
+import com.example.ht.d2d_one.icn.MatchingAlgorithm;
 import com.example.ht.d2d_one.icn.ResourceRequestPacket;
 import com.example.ht.d2d_one.interGroupCommunication.Unicast;
 import com.example.ht.d2d_one.test.TestPage;
+import com.example.ht.d2d_one.util.FileTransfer;
 import com.example.ht.d2d_one.util.GetIpAddrInP2pGroup;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import static com.example.ht.d2d_one.bisicWifiDirect.BasicWifiDirectBehavior.messageHandler;
 
 public class IntraCommunication extends Activity {
     //此处应该是资源查询结果，包括资源名称+对应的设备地址
@@ -48,12 +56,13 @@ public class IntraCommunication extends Activity {
     //最多达到第四个组
     private int RRTTL = 8;
     private String RRMAC;
-    private List<String> pathInfo = new ArrayList<>();
+    private String pathInfo;
     private String tag;
     private String resourceName;
     private String typeOfResourceName;
     public boolean isClickQurrySourceButton = false;
     public static Main2ActivityMessagHandler main2ActivityMessagHandler = new Main2ActivityMessagHandler();
+    private ResourceRequestPacket resourceRequestPacket = new ResourceRequestPacket(RRTTL,RRMAC,pathInfo,tag,resourceName,typeOfResourceName);
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -108,7 +117,6 @@ public class IntraCommunication extends Activity {
                         Log.d("RR信息",resourceRequestPacket.toString());
                         isClickQurrySourceButton = true;
                         new ClientSocket("192.168.49.1",30000,"query",resourceRequestPacket.toString()).start();
-                        BasicWifiDirectBehavior.getGmCacheInformation().addCacheRecommend(System.currentTimeMillis(),resourceName+typeOfResourceName);
                         resourceRequestPacket.destory(resourceRequestPacket);
                         Log.d("开启服务端的mac地址是：",deviceAddress);
                         if(!alreadeBeginClientQueryServer){
@@ -117,8 +125,204 @@ public class IntraCommunication extends Activity {
                             alreadeBeginClientQueryServer = true;
                         }
                         Toast.makeText(IntraCommunication.this, "资源查询成功",Toast.LENGTH_SHORT).show();
+                        Log.d("开启查询的时间",String.valueOf(System.currentTimeMillis()));
                     }else{
                         //如果是组主，本地查询
+                        RRMAC = deviceAddress;
+                        resourceName = editTextSourceQueried.getText().toString();
+                        typeOfResourceName = spinnerSourceType.getSelectedItem().toString();
+                        resourceRequestPacket.TTL = RRTTL;
+                        resourceRequestPacket.MACOfRRN = RRMAC;
+                        resourceRequestPacket.PathInfo = pathInfo;
+                        resourceRequestPacket.TAG = null;
+                        resourceRequestPacket.ResourceName = resourceName;
+                        resourceRequestPacket.TypeOfResourceName = typeOfResourceName;
+                        //更新组主节点的cache表，放到QR表记录之前
+                        if(resourceName!=null&&typeOfResourceName!=null){
+                            if(BasicWifiDirectBehavior.icnOfGO.isAddCache(resourceName+"-"+typeOfResourceName)){
+                                BasicWifiDirectBehavior.icnOfGO.addCache(System.currentTimeMillis(),resourceName+"-"+RRMAC);
+                            }
+                        }
+                        Log.d("组主节点中的cache信息",BasicWifiDirectBehavior.icnOfGO.cacheToString());
+                        boolean isInQR = BasicWifiDirectBehavior.icnOfGO.queryQRTable(resourceRequestPacket);
+                        Log.d("查询是否在QR中存在？？",String.valueOf(isInQR));
+                        if(!isInQR){
+                            if(resourceName!=null&&typeOfResourceName!=null){
+                                //资源匹配
+                                String qurryName = resourceName;
+                                String qurryType = typeOfResourceName;
+                                Log.d("类别标签：::::",qurryType);
+                                Log.d("类别：::::",qurryName);
+                                String dataToBack;
+                                Map<String,String> resultMap = new HashMap<>();
+                                switch (qurryType){
+                                    case "movie":
+                                        MatchingAlgorithm matchingAlgorithm = new MatchingAlgorithm(qurryName,messageHandler.getQurryMovieMap());
+                                        resultMap = matchingAlgorithm.matchingCharacterAlgorithm(qurryName,messageHandler.getQurryMovieMap());
+                                        if(resultMap.size()!=0){
+                                            Collection<String> macOfRONs = resultMap.keySet();
+                                            String macAndPath = null;
+                                            for(String str:macOfRONs){
+                                                macAndPath = str;
+                                            }
+                                            String macOfRON = macAndPath.split("\\+")[0];
+                                            String pathOfResource = macAndPath.split("\\+")[1];
+                                            pathOfResource = pathOfResource.replace(",","").replaceAll(" ","");
+                                            if(macOfRON.equals(deviceAddress)){
+                                                //TODO 资源在组主处的处理情况 2019-3-27
+                                                String ipOfRRN = GetIpAddrInP2pGroup.getIPFromMac(resourceRequestPacket.MACOfRRN);
+                                                String info = resourceRequestPacket.MACOfRRN+"+"+resourceRequestPacket.PathInfo+"+"+pathOfResource+
+                                                        "+"+"dataBack"+"+"+deviceAddress;
+                                                FileTransfer fileTransfer = new FileTransfer(info);
+                                                String filePath = fileTransfer.getFilePath(fileTransfer.getHead());
+                                                File file = new File(filePath);
+                                                long fileLength = file.length();
+                                                FileTransfer fileTransfer1 = new FileTransfer(info,fileLength);
+                                                ClientSocket clientSocket = new ClientSocket(ipOfRRN,60007,"writeFile",fileTransfer1);
+                                                clientSocket.start();
+                                            }else {
+                                                String ipOfRon = GetIpAddrInP2pGroup.getIPFromMac(macAndPath.split("\\+")[0]);
+                                                String headOfData = resourceRequestPacket.MACOfRRN+"+"+resourceRequestPacket.PathInfo+"+"+
+                                                        resourceRequestPacket.ResourceName+"+"+pathOfResource+"+"+"beginDataBack"+"+"+ipOfRon;
+                                                ClientSocket clientSocket = new ClientSocket(ipOfRon,60006,"write",headOfData);
+                                                clientSocket.start();
+                                                Log.d("找到RON节点",ipOfRon);
+                                                Log.d("开启查询的时间",String.valueOf(System.currentTimeMillis()));
+                                            }
+                                        }else{
+                                            dataToBack = "没有查询到信息";
+                                            Log.d("开启查询的时间",String.valueOf(System.currentTimeMillis()));
+                                            intraGroupMulticasatForward();
+                                        }
+                                        break;
+                                    case "music":
+                                        matchingAlgorithm = new MatchingAlgorithm(qurryName,messageHandler.getQurryMusicMap());
+                                        resultMap = matchingAlgorithm.matchingCharacterAlgorithm(qurryName,messageHandler.getQurryMusicMap());
+                                        if(resultMap.size()!=0){
+                                            Collection<String> macOfRONs = resultMap.keySet();
+                                            String macAndPath = null;
+                                            for(String str:macOfRONs){
+                                                macAndPath = str;
+                                            }
+                                            String macOfRON = macAndPath.split("\\+")[0];
+                                            String pathOfResource = macAndPath.split("\\+")[1];
+                                            pathOfResource = pathOfResource.replace(",","").replaceAll(" ","");
+                                            if(macOfRON.equals(deviceAddress)){
+                                                //TODO 资源在组主处的处理情况 2019-3-27
+                                                String ipOfRRN = GetIpAddrInP2pGroup.getIPFromMac(resourceRequestPacket.MACOfRRN);
+                                                String info = resourceRequestPacket.MACOfRRN+"+"+resourceRequestPacket.PathInfo+"+"+pathOfResource+
+                                                        "+"+"dataBack"+"+"+deviceAddress;
+                                                FileTransfer fileTransfer = new FileTransfer(info);
+                                                String filePath = fileTransfer.getFilePath(fileTransfer.getHead());
+                                                File file = new File(filePath);
+                                                long fileLength = file.length();
+                                                FileTransfer fileTransfer1 = new FileTransfer(info,fileLength);
+                                                ClientSocket clientSocket = new ClientSocket(ipOfRRN,60007,"writeFile",fileTransfer1);
+                                                clientSocket.start();
+                                            }else {
+                                                String ipOfRon = GetIpAddrInP2pGroup.getIPFromMac(macAndPath.split("\\+")[0]);
+                                                String headOfData = resourceRequestPacket.MACOfRRN+"+"+resourceRequestPacket.PathInfo+"+"+
+                                                        resourceRequestPacket.ResourceName+"+"+pathOfResource+"+"+"beginDataBack"+"+"+ipOfRon;
+                                                ClientSocket clientSocket = new ClientSocket(ipOfRon,60006,"write",headOfData);
+                                                clientSocket.start();
+                                                Log.d("找到RON节点",ipOfRon);
+                                                Log.d("开启查询的时间",String.valueOf(System.currentTimeMillis()));
+                                            }
+                                        }else{
+                                            dataToBack = "没有查询到信息";
+                                            Log.d("到这里了","哈哈哈哈");
+                                            Log.d("开启查询的时间",String.valueOf(System.currentTimeMillis()));
+                                            intraGroupMulticasatForward();
+                                        }
+                                        break;
+                                    case "packet":
+                                        matchingAlgorithm = new MatchingAlgorithm(qurryName,messageHandler.getQurryPackageMap());
+                                        resultMap = matchingAlgorithm.matchingCharacterAlgorithm(qurryName,messageHandler.getQurryPackageMap());
+                                        if(resultMap.size()!=0){
+                                            Collection<String> macOfRONs = resultMap.keySet();
+                                            String macAndPath = null;
+                                            for(String str:macOfRONs){
+                                                macAndPath = str;
+                                            }
+                                            String macOfRON = macAndPath.split("\\+")[0];
+                                            String pathOfResource = macAndPath.split("\\+")[1];
+                                            pathOfResource = pathOfResource.replace(",","").replaceAll(" ","");
+                                            if(macOfRON.equals(deviceAddress)){
+                                                //TODO 资源在组主处的处理情况 2019-3-27
+                                                String ipOfRRN = GetIpAddrInP2pGroup.getIPFromMac(resourceRequestPacket.MACOfRRN);
+                                                String info = resourceRequestPacket.MACOfRRN+"+"+resourceRequestPacket.PathInfo+"+"+pathOfResource+
+                                                        "+"+"dataBack"+"+"+deviceAddress;
+                                                FileTransfer fileTransfer = new FileTransfer(info);
+                                                String filePath = fileTransfer.getFilePath(fileTransfer.getHead());
+                                                File file = new File(filePath);
+                                                long fileLength = file.length();
+                                                FileTransfer fileTransfer1 = new FileTransfer(info,fileLength);
+                                                ClientSocket clientSocket = new ClientSocket(ipOfRRN,60007,"writeFile",fileTransfer1);
+                                                clientSocket.start();
+                                            }else {
+                                                String ipOfRon = GetIpAddrInP2pGroup.getIPFromMac(macAndPath.split("\\+")[0]);
+                                                String headOfData = resourceRequestPacket.MACOfRRN+"+"+resourceRequestPacket.PathInfo+"+"+
+                                                        resourceRequestPacket.ResourceName+"+"+pathOfResource+"+"+"beginDataBack"+"+"+ipOfRon;
+                                                ClientSocket clientSocket = new ClientSocket(ipOfRon,60006,"write",headOfData);
+                                                clientSocket.start();
+                                                Log.d("找到RON节点",ipOfRon);
+                                                Log.d("开启查询的时间",String.valueOf(System.currentTimeMillis()));
+                                            }
+                                        }else{
+                                            dataToBack = "没有查询到信息";
+                                            Log.d("到这里了","哈哈哈哈");
+                                            Log.d("开启查询的时间",String.valueOf(System.currentTimeMillis()));
+                                            intraGroupMulticasatForward();
+                                        }
+                                        break;
+                                    case "word":
+                                        matchingAlgorithm = new MatchingAlgorithm(qurryName,messageHandler.getQurryWordMap());
+                                        resultMap = matchingAlgorithm.matchingCharacterAlgorithm(qurryName,messageHandler.getQurryWordMap());
+                                        if(resultMap.size()!=0){
+                                            Collection<String> macOfRONs = resultMap.keySet();
+                                            String macAndPath = null;
+                                            for(String str:macOfRONs){
+                                                macAndPath = str;
+                                            }
+                                            String macOfRON = macAndPath.split("\\+")[0];
+                                            String pathOfResource = macAndPath.split("\\+")[1];
+                                            pathOfResource = pathOfResource.replace(",","").replaceAll(" ","");
+                                            if(macOfRON.equals(deviceAddress)){
+                                                //TODO 资源在组主处的处理情况 2019-3-27
+                                                String ipOfRRN = GetIpAddrInP2pGroup.getIPFromMac(resourceRequestPacket.MACOfRRN);
+                                                String info = resourceRequestPacket.MACOfRRN+"+"+resourceRequestPacket.PathInfo+"+"+pathOfResource+
+                                                        "+"+"dataBack"+"+"+deviceAddress;
+                                                FileTransfer fileTransfer = new FileTransfer(info);
+                                                String filePath = fileTransfer.getFilePath(fileTransfer.getHead());
+                                                File file = new File(filePath);
+                                                long fileLength = file.length();
+                                                FileTransfer fileTransfer1 = new FileTransfer(info,fileLength);
+                                                ClientSocket clientSocket = new ClientSocket(ipOfRRN,60007,"writeFile",fileTransfer1);
+                                                clientSocket.start();
+                                            }else {
+                                                String ipOfRon = GetIpAddrInP2pGroup.getIPFromMac(macAndPath.split("\\+")[0]);
+                                                String headOfData = resourceRequestPacket.MACOfRRN+"+"+resourceRequestPacket.PathInfo+"+"+
+                                                        resourceRequestPacket.ResourceName+"+"+pathOfResource+"+"+"beginDataBack"+"+"+ipOfRon;
+                                                ClientSocket clientSocket = new ClientSocket(ipOfRon,60006,"write",headOfData);
+                                                clientSocket.start();
+                                                Log.d("找到RON节点",ipOfRon);
+                                                Log.d("开启查询的时间",String.valueOf(System.currentTimeMillis()));
+                                            }
+                                        }else{
+                                            dataToBack = "没有查询到信息";
+                                            Log.d("到这里了","哈哈哈哈");
+                                            Log.d("开启查询的时间",String.valueOf(System.currentTimeMillis()));
+                                            intraGroupMulticasatForward();
+                                        }
+                                        break;
+                                    default:
+                                        //对于无此类型的数据，不再转发
+                                        Log.d("查询结果","无此查询类型，请重新输入：");
+                                }
+                            }
+                        }else{
+                            Log.d("该查询在QR中命中","该查询不需要查看CS表，只需等待。。。。");
+                        }
                         isClickQurrySourceButton = true;
                     }
                 }
@@ -178,8 +382,11 @@ public class IntraCommunication extends Activity {
                     wifiAddress = (i & 0xFF ) + "." + ((i >> 8 ) & 0xFF) + "." + ((i >> 16 ) & 0xFF) + "." + ( i >> 24 & 0xFF) ;
                     Log.d("ip地址是", wifiAddress);
                     MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread
-                            (goMAC,deviceAddress,40000,"recv","239.1.2.3",p2pIp,wifiAddress,true);
+                            (goMAC,deviceAddress,GetIpAddrInP2pGroup.getWlanMac(),40000,"recv","239.1.2.3",0,true);
                     myMulticastSocketThread.start();
+                    MyMulticastSocketThread myMulticastSocketThread1 = new MyMulticastSocketThread
+                            (goMAC,GetIpAddrInP2pGroup.getWlanMac(),deviceAddress,40000,"recv","239.1.2.3",1,true);
+                    myMulticastSocketThread1.start();
                     Log.d("开启组播接听","组播开始接收信息了!!!");
                     //根据接收到的信息，更新RR, 并向外组转发
                 }
@@ -294,5 +501,17 @@ public class IntraCommunication extends Activity {
         @Override
         public void remove(String s) {
         }
+    }
+    private void intraGroupMulticasatForward(){
+        resourceRequestPacket.TTL = resourceRequestPacket.TTL - 1;
+        BasicWifiDirectBehavior.icnOfGO.addQRTable(resourceRequestPacket);
+        List<String> gwNodes;
+        gwNodes = BasicWifiDirectBehavior.icnOfGO.chooseGW(BasicWifiDirectBehavior.icnOfGO.getGM());
+        String temp = gwNodes.toString().replace("\\[","").replace("\\]","");
+        String nodeInfo = temp.replace(" ","");
+        MyMulticastSocketThread myMulticastSocketThread = new MyMulticastSocketThread
+                (40000,"send","239.1.2.3",nodeInfo+"-"+resourceRequestPacket.toString());
+        myMulticastSocketThread.start();
+        Log.d("组播发送信息",nodeInfo+"-"+resourceRequestPacket.toString());
     }
 }

@@ -10,12 +10,12 @@ public class ResourceRequestPacket implements Serializable{
      */
     public int TTL;
     public String MACOfRRN;
-    public List<String> PathInfo = new ArrayList<>();
+    public String PathInfo;
     public String TAG;
     public String ResourceName;
     public String TypeOfResourceName;
 
-    public ResourceRequestPacket(int TTL,String MACOfRRN,List<String> Path,String TAG,String Name,String typeOfResourceName){
+    public ResourceRequestPacket(int TTL,String MACOfRRN,String Path,String TAG,String Name,String typeOfResourceName){
         this.TTL = TTL;
         this.MACOfRRN = MACOfRRN;
         this.PathInfo = Path;
@@ -23,7 +23,7 @@ public class ResourceRequestPacket implements Serializable{
         this.ResourceName = Name;
         this.TypeOfResourceName = typeOfResourceName;
     }
-    public ResourceRequestPacket(int TTL,String MACOfRRN,List<String> Path,String Name,String typeOfResourceName){
+    public ResourceRequestPacket(int TTL,String MACOfRRN,String Path,String Name,String typeOfResourceName){
         this.TTL = TTL;
         this.MACOfRRN = MACOfRRN;
         this.PathInfo = Path;
@@ -45,7 +45,7 @@ public class ResourceRequestPacket implements Serializable{
      */
     public ResourceRequestPacket update(ResourceRequestPacket resourceRequestPacket,String MACOfThisGO){
         resourceRequestPacket.TTL = resourceRequestPacket.TTL-1;
-        resourceRequestPacket.PathInfo.add(MACOfThisGO);
+        resourceRequestPacket.PathInfo = resourceRequestPacket.PathInfo+","+MACOfThisGO;
         return resourceRequestPacket;
     }
     /**
@@ -53,18 +53,18 @@ public class ResourceRequestPacket implements Serializable{
      */
     public String toString(){
         String string;
-        String path;
-        if(PathInfo.size()==0){
-            path = null;
-        }else{
-            path = PathInfo.get(0);
-            int i =0;
-            while (i<PathInfo.size()&&PathInfo.get(i)!=null){
-                path = path +","+ PathInfo.get(i);
-                i++;
-            }
-        }
-        string = Integer.toString(TTL)+"+"+MACOfRRN+"+"+path+"+"+TAG+"+"+ResourceName+"+"+TypeOfResourceName;
+//        String path;
+//        if(PathInfo.size()==0){
+//            path = null;
+//        }else{
+//            path = PathInfo.get(0);
+//            int i =0;
+//            while (i<PathInfo.size()&&PathInfo.get(i)!=null){
+//                path = path +","+ PathInfo.get(i);
+//                i++;
+//            }
+//        }
+        string = Integer.toString(TTL)+"+"+MACOfRRN+"+"+PathInfo+"+"+TAG+"+"+ResourceName+"+"+TypeOfResourceName;
         return string;
     }
 }

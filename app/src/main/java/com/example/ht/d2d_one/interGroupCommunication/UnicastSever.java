@@ -3,15 +3,18 @@ package com.example.ht.d2d_one.interGroupCommunication;
 import android.util.Log;
 
 import com.example.ht.d2d_one.bisicWifiDirect.BasicWifiDirectBehavior;
+import com.example.ht.d2d_one.util.FileTransfer;
 import com.example.ht.d2d_one.util.GetIpAddrInP2pGroup;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 
 public class UnicastSever extends Thread{
     private int port;
@@ -43,27 +46,39 @@ public class UnicastSever extends Thread{
                     gwmac = GetIpAddrInP2pGroup.getWlanMac();
                     Log.d("网关节点的wlan0口mac地址",gwmac);
 
-                    BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-                    bufferedWriter.write(gomac+"+"+gwmac);
-                    bufferedWriter.write('\n');
-                    bufferedWriter.write("\n");
-                    bufferedWriter.flush();
+//                    BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+//                    bufferedWriter.write(gomac+"+"+gwmac);
+                    String head = gomac+"+"+gwmac;
+                    FileTransfer fileTransfer = new FileTransfer(head);
+                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                    BasicWifiDirectBehavior.icnOfGW.addIOOS("3",objectOutputStream);
+                    objectOutputStream.writeObject(fileTransfer);
+                    objectOutputStream.flush();
+                    objectOutputStream.reset();
+//                    bufferedWriter.write('\n');
+//                    bufferedWriter.write("\n");
+//                    bufferedWriter.flush();
                     //不再监听TCP请求，而是开一个socketReuse.read
-                    String info = "";
+                    String info = " ";
                     while (true){
                         try{
+                            if(socket.isClosed()){
+                                break;
+                            }
                             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                             info = bufferedReader.readLine();
-                            Log.d("收到来自LC组主节点的单播消息2",info);
-                            if(info.equals("data")){
-                                // TODO: 2019/1/21 关于数据包回溯的工作
-
-                            }
-                        }catch (IOException e){
+                            //Log.d("收到来自LC组主节点的单播消息2",info);
+//                            if(info.equals("data")){
+//                                // TODO: 2019/1/21 关于数据包回溯的工作 组主到网关之间的数据传输不用复用socket了，可以正常使用socket
+//
+//                            }
+                        }catch (SocketException e){
+                            System.out.print("UnicastServer异常");
                             e.printStackTrace();
                         }
                     }
                 }
+                break;
             }
         }catch (IOException e){
             e.printStackTrace();
